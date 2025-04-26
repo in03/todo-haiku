@@ -1,7 +1,7 @@
-import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
+import { component$, useSignal, $, useVisibleTask$, noSerialize } from '@builder.io/qwik';
 import { useNavigate } from '@builder.io/qwik-city';
 import { createBrowserSupabaseClient } from '../services/supabase';
-import { useAuth } from '~/contexts/auth-context';
+import { useAuth, useToggleDevMode } from '~/contexts/auth-context';
 import { Provider } from '@supabase/supabase-js';
 
 export default component$(() => {
@@ -14,7 +14,8 @@ export default component$(() => {
   const isLoading = useSignal(false);
   const supabase = useSignal<any>(null);
   const navigate = useNavigate();
-  const auth = useAuth() as { isDevelopmentMode: boolean; isAuthenticated: boolean };
+  const auth = useAuth();
+  const toggleDevMode = useToggleDevMode();
 
   // If already authenticated or in dev mode, redirect to home
   if (auth.isAuthenticated || auth.isDevelopmentMode) {
@@ -24,7 +25,10 @@ export default component$(() => {
 
   // Initialize Supabase client
   useVisibleTask$(() => {
-    supabase.value = createBrowserSupabaseClient();
+    const client = createBrowserSupabaseClient();
+    if (client) {
+      supabase.value = noSerialize(client);
+    }
   });
 
   // Handle email/password authentication
@@ -273,10 +277,7 @@ export default component$(() => {
 
             <div class="mt-6 pt-4 border-t border-border">
               <button
-                onClick$={() => {
-                  auth.isDevelopmentMode = true;
-                  navigate('/');
-                }}
+                onClick$={toggleDevMode}
                 class="text-xs text-muted-foreground hover:text-accent"
               >
                 Enable Development Mode

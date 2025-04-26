@@ -1,17 +1,13 @@
 import { component$, Slot, useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
-import { Link, useNavigate } from '@builder.io/qwik-city';
-import { createBrowserSupabaseClient } from '../services/supabase';
+import { Link } from '@builder.io/qwik-city';
 import { registerServiceWorker, requestNotificationPermission } from '../services/push-notifications';
-import { useAuth } from '~/contexts/auth-context';
+import { useAuth, useToggleDevMode, useSignOut } from '~/contexts/auth-context';
 
 export default component$(() => {
   const isMenuOpen = useSignal(false);
-  const navigate = useNavigate();
-  const auth = useAuth() as {
-    user: any;
-    isAuthenticated: boolean;
-    isDevelopmentMode: boolean;
-  };
+  const auth = useAuth();
+  const toggleDevMode = useToggleDevMode();
+  const signOut = useSignOut();
 
   // Register service worker
   useVisibleTask$(async () => {
@@ -26,26 +22,14 @@ export default component$(() => {
     }
   });
 
-  // Handle sign out
+  // Handle sign out using auth context
   const handleSignOut = $(async () => {
-    try {
-      // Create a new Supabase client for sign out
-      const client = createBrowserSupabaseClient();
-      if (client) {
-        await client.auth.signOut();
-        // Auth context will handle the redirect
-      }
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
+    await signOut();
   });
 
-  // Toggle development mode
-  const toggleDevMode = $(() => {
-    auth.isDevelopmentMode = !auth.isDevelopmentMode;
-    if (!auth.isDevelopmentMode && !auth.isAuthenticated) {
-      navigate('/auth');
-    }
+  // Toggle development mode using auth context
+  const handleToggleDevMode = $(() => {
+    toggleDevMode();
   });
 
   return (
@@ -99,7 +83,7 @@ export default component$(() => {
                 {/* Development mode toggle */}
                 <div class="border-t border-border mt-2 pt-2">
                   <button
-                    onClick$={toggleDevMode}
+                    onClick$={handleToggleDevMode}
                     class="block w-full text-left px-4 py-2 text-xs text-muted-foreground hover:bg-muted"
                   >
                     {auth.isDevelopmentMode ? 'Disable' : 'Enable'} Dev Mode

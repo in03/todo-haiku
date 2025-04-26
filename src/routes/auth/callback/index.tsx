@@ -1,4 +1,4 @@
-import { component$ } from '@builder.io/qwik';
+import { component$, noSerialize } from '@builder.io/qwik';
 import { useNavigate } from '@builder.io/qwik-city';
 import { useVisibleTask$ } from '@builder.io/qwik';
 import { createBrowserSupabaseClient } from '~/services/supabase';
@@ -9,26 +9,29 @@ export default component$(() => {
   // Handle the OAuth callback
   useVisibleTask$(async () => {
     try {
-      const supabase = createBrowserSupabaseClient();
-      
-      if (!supabase) {
+      const client = createBrowserSupabaseClient();
+
+      if (!client) {
         console.error('Failed to create Supabase client');
         navigate('/auth?error=client_init_failed');
         return;
       }
-      
+
+      // Use noSerialize to prevent serialization errors
+      const supabase = noSerialize(client);
+
       // Get the URL hash
       const hash = window.location.hash;
-      
+
       // Process the callback
       const { error } = await supabase.auth.getSession();
-      
+
       if (error) {
         console.error('Error getting session:', error);
         navigate('/auth?error=session_error');
         return;
       }
-      
+
       // Redirect to the home page
       navigate('/');
     } catch (error) {

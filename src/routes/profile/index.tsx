@@ -1,4 +1,4 @@
-import { component$, useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
+import { component$, useSignal, useVisibleTask$, $, noSerialize } from '@builder.io/qwik';
 import { DocumentHead, routeLoader$ } from '@builder.io/qwik-city';
 import Layout from '../../components/Layout';
 import { createBrowserSupabaseClient, getServerSupabaseClient } from '../../services/supabase';
@@ -8,6 +8,7 @@ import {
   requestNotificationPermission,
   subscribeToPushNotifications
 } from '../../services/push-notifications';
+import { useAuth, useToggleDevMode } from '~/contexts/auth-context';
 
 // Server-side route loader to get user data
 export const useUserLoader = routeLoader$(async () => {
@@ -18,20 +19,26 @@ export const useUserLoader = routeLoader$(async () => {
 
 export default component$(() => {
   const userLoader = useUserLoader();
-  const user = useSignal<any>(userLoader.value);
   const notificationsEnabled = useSignal(false);
   const syncStatus = useSignal('');
   const supabase = useSignal<any>(null);
 
+  // Get auth state from context
+  const auth = useAuth();
+  const toggleDevMode = useToggleDevMode();
+
   // Initialize Supabase client and check notification status
   useVisibleTask$(async () => {
     // Initialize Supabase client
-    supabase.value = createBrowserSupabaseClient();
+    const client = createBrowserSupabaseClient();
 
-    // Set up auth state change listener
-    supabase.value.auth.onAuthStateChange((event, session) => {
-      user.value = session?.user || null;
-    });
+    if (client) {
+      // Use noSerialize to prevent serialization errors
+      supabase.value = noSerialize(client);
+
+      // No need to set up auth state change listener here
+      // We're using the auth context instead
+    }
 
     // Check notification permission
     if (isPushNotificationSupported()) {
@@ -68,16 +75,21 @@ export default component$(() => {
         <div class="zen-container">
           <h1 class="text-3xl font-bold mb-6">Your Profile</h1>
 
-          {user.value ? (
+          {auth.isAuthenticated && auth.user ? (
             <div>
               <div class="bg-card p-6 rounded-lg mb-6">
                 <h2 class="text-xl font-semibold mb-4">Account Information</h2>
                 <p class="mb-2">
-                  <span class="text-muted-foreground">Email:</span> {user.value.email}
+                  <span class="text-muted-foreground">Email:</span> {auth.user.email}
                 </p>
                 <p>
-                  <span class="text-muted-foreground">User ID:</span> {user.value.id}
+                  <span class="text-muted-foreground">User ID:</span> {auth.user.id}
                 </p>
+                {auth.isDevelopmentMode && (
+                  <p class="mt-4 text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-3 py-1 rounded-md inline-block">
+                    Development Mode Active
+                  </p>
+                )}
               </div>
 
               <div class="bg-card p-6 rounded-lg mb-6">
@@ -128,12 +140,26 @@ export default component$(() => {
               <p class="text-muted-foreground mb-4">
                 Please sign in to view your profile.
               </p>
-              <a
-                href="/auth"
-                class="px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/90"
-              >
-                Sign In
-              </a>
+              {auth.isDevelopmentMode ? (
+                <div>
+                  <p class="mb-4 text-sm">
+                    You are in development mode but not authenticated.
+                  </p>
+                  <button
+                    onClick$={toggleDevMode}
+                    class="px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/90"
+                  >
+                    Enable Dev User
+                  </button>
+                </div>
+              ) : (
+                <a
+                  href="/auth"
+                  class="px-4 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/90"
+                >
+                  Sign In
+                </a>
+              )}
             </div>
           )}
         </div>
