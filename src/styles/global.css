@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0deg 0% 3%;
+    --foreground: 0deg 0% 98%;
+
+    --card: 0deg 0% 5%;
+    --card-foreground: 0deg 0% 98%;
+
+    --popover: 0deg 0% 5%;
+    --popover-foreground: 0deg 0% 98%;
+
+    --primary: 0deg 0% 98%;
+    --primary-foreground: 0deg 0% 9%;
+
+    --secondary: 0deg 0% 14.9%;
+    --secondary-foreground: 0deg 0% 98%;
+
+    --muted: 0deg 0% 14.9%;
+    --muted-foreground: 0deg 0% 63.9%;
+
+    --accent: 12deg 60% 50%;
+    --accent-foreground: 0deg 0% 98%;
+
+    --destructive: 0deg 62.8% 30.6%;
+    --destructive-foreground: 0deg 0% 98%;
+
+    --border: 0deg 0% 14.9%;
+    --input: 0deg 0% 14.9%;
+    --ring: 0deg 0% 83.9%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+}
+
+.zen-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .zen-container {
+    max-width: 90%;
+  }
+}
+
+@media (min-width: 1400px) {
+  .zen-container {
+    max-width: 85%;
+  }
+}
+
+.haiku-card {
+  border: 1px solid hsl(var(--border) / 1);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  background-color: hsl(var(--card) / 1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.haiku-card:hover {
+  transform: translateY(-2px);
+}
+
+.haiku-text {
+  font-family: 'Noto Serif JP', serif;
+  line-height: 1.7;
+}
+
+.zen-divider {
+  height: 1px;
+  background-color: hsl(var(--border) / 1);
+  margin: 2rem 0;
+  width: 100%;
+}
+
+/* Drag and drop styles */
+[draggable=true] {
+  cursor: grab;
+}
+
+[draggable=true]:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.drag-over {
+  border: 2px dashed hsl(var(--accent) / 0.5);
+  background-color: hsl(var(--accent) / 0.1);
+}
+
+/* SortableJS styles */
+.sortable-ghost {
+  opacity: 0.4;
+  background-color: hsl(var(--accent) / 0.1) !important;
+  border: 2px dashed hsl(var(--accent) / 0.5) !important;
+}
+
+.sortable-chosen {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: scale(1.02);
+  z-index: 10;
+}
+
+.sortable-drag {
+  opacity: 0.8;
+  transform: rotate(2deg);
+  cursor: grabbing !important;
+}
+
+/* Drag handle */
+.drag-handle {
+  cursor: grab;
+  font-size: 1.2rem;
+  user-select: none;
+  display: inline-block;
+  transition: color 0.2s ease;
+}
+
+.drag-handle:hover {
+  color: hsl(var(--accent));
+}
+
+.task-card:hover .drag-handle {
+  color: hsl(var(--accent));
+}
+
+/* Kanban board styles */
+.kanban-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+}
+
+.kanban-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.kanban-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-scroll-container::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 20px;
+  border: 3px solid transparent;
+}
+
+.kanban-scroll-container::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Scroll arrow animations */
+@keyframes pulse {
+  0% { transform: translateY(-50%) scale(1); }
+  50% { transform: translateY(-50%) scale(1.05); }
+  100% { transform: translateY(-50%) scale(1); }
+}
+
+#left-scroll-arrow, #right-scroll-arrow {
+  animation: pulse 2s infinite ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  display: flex !important; /* Force visibility */
+}
+
+#left-scroll-arrow:hover, #right-scroll-arrow:hover {
+  animation: none;
+  transform: translateY(-50%) scale(1.1);
+  background-color: hsl(var(--background));
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
