@@ -2,23 +2,34 @@ import { component$ } from '@builder.io/qwik';
 import { DocumentHead } from '@builder.io/qwik-city';
 import AppLayout from '../components/Layout';
 import { ResponsiveKanban } from '../components/kanban/ResponsiveKanban';
+import { AuthGuard } from '~/components/AuthGuard';
+import { useAuth } from '~/contexts/auth-context';
 
 export default component$(() => {
+  const auth = useAuth() as { isDevelopmentMode: boolean };
+
   return (
-    <AppLayout>
-      <div class="py-8">
-        <div class="zen-container text-center mb-12">
-          <h1 class="text-4xl font-bold mb-4">Todo Haiku 🍃</h1>
-          <p class="text-xl text-muted-foreground">
-            A mindful task manager where every task is a haiku
-          </p>
+    <AuthGuard>
+      <AppLayout>
+        <div class="py-8">
+          <div class="zen-container text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4">Todo Haiku 🍃</h1>
+            <p class="text-xl text-muted-foreground">
+              A mindful task manager where every task is a haiku
+            </p>
+            {auth.isDevelopmentMode && (
+              <div class="mt-2 text-sm bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-3 py-1 rounded-md inline-block">
+                Development Mode: Auth Bypassed
+              </div>
+            )}
+          </div>
+
+          <div class="zen-divider mx-auto" />
+
+          <ResponsiveKanban />
         </div>
-
-        <div class="zen-divider mx-auto" />
-
-        <ResponsiveKanban />
-      </div>
-    </AppLayout>
+      </AppLayout>
+    </AuthGuard>
   );
 });
 

@@ -2,58 +2,48 @@ import { component$, Slot, useSignal, useVisibleTask$, $ } from '@builder.io/qwi
 import { Link, useNavigate } from '@builder.io/qwik-city';
 import { createBrowserSupabaseClient } from '../services/supabase';
 import { registerServiceWorker, requestNotificationPermission } from '../services/push-notifications';
+import { useAuth } from '~/contexts/auth-context';
 
 export default component$(() => {
-  const user = useSignal<any>(null);
   const isMenuOpen = useSignal(false);
-  const supabase = useSignal<any>(null);
   const navigate = useNavigate();
+  const auth = useAuth() as {
+    user: any;
+    isAuthenticated: boolean;
+    isDevelopmentMode: boolean;
+  };
 
-  // Initialize Supabase client and check if user is logged in
-  useVisibleTask$(async ({ track }) => {
+  // Register service worker
+  useVisibleTask$(async () => {
     try {
-      // Initialize Supabase client
-      const client = createBrowserSupabaseClient();
-
-      if (!client) {
-        console.error('Failed to create Supabase client');
-        return;
-      }
-
-      supabase.value = client;
-
-      // Get session
-      const { data } = await client.auth.getSession();
-      user.value = data.session?.user || null;
-
-      // Set up auth state change listener
-      const { data: authListener } = client.auth.onAuthStateChange((event, session) => {
-        user.value = session?.user || null;
-      });
-
       // Register service worker and request notification permission
-      try {
-        const registration = await registerServiceWorker();
-        if (registration) {
-          await requestNotificationPermission();
-        }
-      } catch (error) {
-        console.error('Error registering service worker:', error);
+      const registration = await registerServiceWorker();
+      if (registration) {
+        await requestNotificationPermission();
       }
-
-      // Clean up auth listener on component unmount
-      return () => {
-        authListener?.subscription.unsubscribe();
-      };
     } catch (error) {
-      console.error('Error in Layout useVisibleTask$:', error);
+      console.error('Error registering service worker:', error);
     }
   });
 
   // Handle sign out
   const handleSignOut = $(async () => {
-    if (supabase.value) {
-      await supabase.value.auth.signOut();
+    try {
+      // Create a new Supabase client for sign out
+      const client = createBrowserSupabaseClient();
+      if (client) {
+        await client.auth.signOut();
+        // Auth context will handle the redirect
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  });
+
+  // Toggle development mode
+  const toggleDevMode = $(() => {
+    auth.isDevelopmentMode = !auth.isDevelopmentMode;
+    if (!auth.isDevelopmentMode && !auth.isAuthenticated) {
       navigate('/auth');
     }
   });
@@ -63,7 +53,7 @@ export default component$(() => {
       <header class="border-b border-border">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link href="/" class="text-xl font-semibold">
-            Todo Haiku 
+            Todo Haiku
           </Link>
 
           <div class="relative">
@@ -77,10 +67,10 @@ export default component$(() => {
 
             {isMenuOpen.value && (
               <div class="absolute right-0 mt-2 w-48 bg-card border border-border rounded-md shadow-lg z-10">
-                {user.value ? (
+                {auth.isAuthenticated ? (
                   <div>
                     <div class="px-4 py-2 text-sm text-muted-foreground border-b border-border">
-                      {user.value.email}
+                      {auth.user?.email || 'Authenticated User'}
                     </div>
                     <Link href="/" class="block px-4 py-2 text-sm hover:bg-muted">
                       Home
@@ -105,6 +95,16 @@ export default component$(() => {
                     </Link>
                   </div>
                 )}
+
+                {/* Development mode toggle */}
+                <div class="border-t border-border mt-2 pt-2">
+                  <button
+                    onClick$={toggleDevMode}
+                    class="block w-full text-left px-4 py-2 text-xs text-muted-foreground hover:bg-muted"
+                  >
+                    {auth.isDevelopmentMode ? 'Disable' : 'Enable'} Dev Mode
+                  </button>
+                </div>
               </div>
             )}
           </div>

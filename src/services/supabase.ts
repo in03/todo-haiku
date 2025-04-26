@@ -28,7 +28,16 @@ export const createBrowserSupabaseClient = () => {
     console.error('Invalid Supabase URL. Check your environment variables.');
     return null;
   }
-  return createClient<Database>(supabaseUrl, supabaseAnonKey);
+
+  // Create client with auth persistence
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      storageKey: 'todo-haiku-auth',
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
 };
 
 // Create a server client using server$
@@ -84,6 +93,53 @@ export async function getSession() {
   }
 
   const { data, error } = await supabase.auth.getSession();
+  return { data, error };
+}
+
+// OAuth sign-in functions
+export async function signInWithGoogle(redirectTo?: string) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') };
+  }
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectTo || window.location.origin + '/auth/callback'
+    }
+  });
+
+  return { data, error };
+}
+
+export async function signInWithGithub(redirectTo?: string) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') };
+  }
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      redirectTo: redirectTo || window.location.origin + '/auth/callback'
+    }
+  });
+
+  return { data, error };
+}
+
+// Magic link authentication
+export async function signInWithMagicLink(email: string, redirectTo?: string) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') };
+  }
+
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: redirectTo || window.location.origin + '/auth/callback'
+    }
+  });
+
   return { data, error };
 }
 

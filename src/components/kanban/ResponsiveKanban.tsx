@@ -137,7 +137,7 @@ export const ResponsiveKanban = component$(() => {
   useVisibleTask$(({ cleanup }) => {
     const intervalId = setInterval(() => {
       refreshTrigger.value++;
-    }, 5000); // Refresh every 5 seconds
+    }, 30000); // Refresh every 30 seconds
 
     // Clean up the interval when the component is unmounted
     cleanup(() => clearInterval(intervalId));

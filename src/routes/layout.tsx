@@ -1,5 +1,10 @@
 import { component$, Slot } from '@builder.io/qwik';
+import { AuthProvider } from '~/contexts/auth-context';
 
 export default component$(() => {
-  return <Slot />;
+  return (
+    <AuthProvider>
+      <Slot />
+    </AuthProvider>
+  );
 });

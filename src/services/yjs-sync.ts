@@ -45,7 +45,8 @@ if (isBrowser) {
           console.log('Loaded data from IndexedDB');
 
           if (isOnline) {
-            syncWithSupabase();
+            // Use a longer delay for initial sync to ensure everything is loaded
+            debouncedSync(5000);
           }
         });
       } catch (error) {
@@ -65,7 +66,9 @@ if (isBrowser) {
 if (isBrowser) {
   window.addEventListener('online', () => {
     isOnline = true;
-    syncWithSupabase();
+    console.log('Network connection restored, scheduling sync');
+    // Use a delay to ensure network is stable
+    debouncedSync(3000);
   });
 
   window.addEventListener('offline', () => {
@@ -75,36 +78,60 @@ if (isBrowser) {
 
 // Function to sync local changes with Supabase
 export async function syncWithSupabase() {
-  if (!isOnline || isSyncing) return;
-
-  if (!supabase) {
-    console.error('Supabase client not initialized');
+  // Skip sync if offline or already syncing
+  if (!isOnline || isSyncing) {
+    console.log('Skipping Supabase sync - offline or already syncing');
     return;
   }
+
+  // Skip sync if Supabase client is not initialized
+  if (!supabase) {
+    console.log('Skipping Supabase sync - Supabase client not initialized');
+    return;
+  }
+
+  // Check if auth is enabled in the app
+  const authEnabled = true; // Set to false during development if needed
 
   try {
     isSyncing = true;
 
     // Get current user
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user.id;
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
-    if (!userId) {
+    // Handle session error
+    if (sessionError) {
+      console.log('Skipping Supabase sync - session error:', sessionError.message);
       isSyncing = false;
       return;
     }
+
+    const userId = sessionData.session?.user.id;
+
+    // Skip sync if no authenticated user and auth is enabled
+    if (!userId && authEnabled) {
+      console.log('Skipping Supabase sync - no authenticated user');
+      isSyncing = false;
+      return;
+    }
+
+    // If auth is disabled for development, use a mock user ID
+    const effectiveUserId = userId || 'dev-user-id';
 
     // Get all todos from Supabase
     const { data: remoteTodos, error } = await supabase
       .from('todos')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', effectiveUserId);
 
     if (error) {
       console.error('Error fetching remote todos:', error);
       isSyncing = false;
       return;
     }
+
+    // Log sync status
+    console.log(`Syncing ${remoteTodos?.length || 0} remote todos with local data`);
 
     // Get all local todos
     const localTodos = Array.from(todosMap.entries()).map(([id, value]) => ({
@@ -149,7 +176,7 @@ export async function syncWithSupabase() {
               content: localTodo.content,
               is_completed: localTodo.is_completed,
               status: status,
-              user_id: userId,
+              user_id: effectiveUserId,
               updated_at: localTodo.updated_at
             });
         }
@@ -173,6 +200,8 @@ export async function syncWithSupabase() {
   } catch (error) {
     console.error('Error syncing with Supabase:', error);
   } finally {
+    // Log completion
+    console.log('Supabase sync completed');
     isSyncing = false;
   }
 }
@@ -216,9 +245,9 @@ export function addTodo(todo) {
       }
     }
 
-    // Sync with Supabase if online
+    // Sync with Supabase if online (debounced)
     if (isOnline) {
-      syncWithSupabase();
+      debouncedSync();
     }
 
     console.log('Todo added successfully:', todo.id);
@@ -251,7 +280,7 @@ export function updateTodo(id, updates) {
     });
 
     if (isOnline) {
-      syncWithSupabase();
+      debouncedSync();
     }
   }
 }
@@ -261,7 +290,7 @@ export function deleteTodo(id) {
   todosMap.delete(id);
 
   if (isOnline) {
-    syncWithSupabase();
+    debouncedSync();
   }
 }
 
@@ -298,10 +327,23 @@ export function getAllTodos() {
   }
 }
 
+// Debounce function to limit sync frequency
+let syncDebounceTimeout: any = null;
+const debouncedSync = (delay = 2000) => {
+  if (syncDebounceTimeout) {
+    clearTimeout(syncDebounceTimeout);
+  }
+
+  syncDebounceTimeout = setTimeout(() => {
+    if (isOnline) {
+      syncWithSupabase();
+    }
+    syncDebounceTimeout = null;
+  }, delay);
+};
+
 // Listen for changes to the todos map
 todosMap.observe(() => {
-  // Trigger sync when todos change
-  if (isOnline) {
-    syncWithSupabase();
-  }
+  // Trigger debounced sync when todos change
+  debouncedSync();
 });
