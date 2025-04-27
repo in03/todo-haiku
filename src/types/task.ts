@@ -1,7 +1,7 @@
-export type TaskStatus = 
-  | 'open' 
-  | 'doing' 
-  | 'done' 
+export type TaskStatus =
+  | 'open'
+  | 'doing'
+  | 'done'
   | 'blocked';
 
 export interface Task {
@@ -12,6 +12,8 @@ export interface Task {
   created_at: string;
   updated_at: string;
   user_id: string;
+  sortOrder?: number;
+  isCollapsed?: boolean;
 }
 
 export const TASK_STATUS_CONFIG = {

@@ -10,4 +10,9 @@
 
 - [ ] Styling defaults. Why are scrollbars gross? Why are dropdowns gross?
 
-- [ ] Syllable validation could use a supabase serverless function? There's a Python ML project that does this with 95% accuracy. Not sure if overkill, but apparently syllables are hard. Otherwise try a library that's more robust than our simple approach. Or go heavy handed and literally use an LLM like Claude Haiku. If we do go with a more general approach, we may be able to implement real haiku ratings in the validation! 6/10. Not your best, but ok.
+- [ ] Syllable validation could use a supabase serverless function? There's a Python ML project that does this with 95% accuracy. Not sure if overkill, but apparently syllables are hard. Otherwise try a library that's more robust than our simple approach. Or go heavy handed and literally use an LLM like Claude Haiku. 
+
+- [ ] If we do go with a more general LLLM approach, we may be able to implement real haiku ratings in the validation! 6/10. Not your best, but ok.
+
+- [ ] I think we go with general LLM. Let's use it to generate metadata based off the haikus:
+  Mood, critique, rating, etc. We can either structure metadata really well here, or use vector database to store memories against an ID for each task. Everytime an edit is made, the embedding would need updating.
