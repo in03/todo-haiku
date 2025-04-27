@@ -297,13 +297,38 @@ export function deleteTodo(id) {
 // Function to get all todos
 export function getAllTodos() {
   if (!isBrowser || !todosMap) {
+    console.log('getAllTodos: Not in browser or todosMap not available');
     return [];
   }
 
   try {
     const validStatuses = getValidStatuses();
+    const entries = Array.from(todosMap.entries());
+    console.log('getAllTodos: Found', entries.length, 'entries in todosMap');
 
-    return Array.from(todosMap.entries()).map(([id, value]) => {
+    // If no entries in Y.js, check localStorage as fallback
+    if (entries.length === 0 && isBrowser && window.localStorage) {
+      try {
+        const localTodos = JSON.parse(localStorage.getItem('todos') || '[]');
+        console.log('getAllTodos: Found', localTodos.length, 'todos in localStorage');
+
+        if (localTodos.length > 0) {
+          // Add todos from localStorage to Y.js
+          localTodos.forEach(todo => {
+            if (todo.id) {
+              todosMap.set(todo.id, todo);
+            }
+          });
+
+          // Try again with the updated todosMap
+          return getAllTodos();
+        }
+      } catch (e) {
+        console.error('Error reading from localStorage:', e);
+      }
+    }
+
+    return entries.map(([id, value]) => {
       // Ensure each task has a valid status
       if (!value.status || !validStatuses.includes(value.status)) {
         // If the task doesn't have a valid status, set it based on is_completed
