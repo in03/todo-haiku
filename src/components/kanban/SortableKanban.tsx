@@ -3,6 +3,7 @@ import Sortable from 'sortablejs';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '~/components/ui';
 import { Task, TaskStatus, TASK_STATUS_CONFIG } from '~/types/task';
 import { getAllTodos, updateTodo, deleteTodo } from '~/services/yjs-sync';
+import { SimpleTaskModal } from './SimpleTaskModal';
 
 export const SortableKanban = component$(() => {
   const tasks = useStore<Task[]>([]);
@@ -14,6 +15,11 @@ export const SortableKanban = component$(() => {
     'done': null,
     'blocked': null
   });
+
+  // Modal state
+  const modalOpen = useSignal(false);
+  const editTask = useSignal<Task | null>(null);
+  const defaultStatus = useSignal<TaskStatus>('open');
 
   // Load tasks on component mount and when refreshTrigger changes
   useVisibleTask$(({ track }) => {
@@ -95,7 +101,10 @@ export const SortableKanban = component$(() => {
               ghostClass: 'sortable-ghost',
               chosenClass: 'sortable-chosen',
               dragClass: 'sortable-drag',
-              handle: '.drag-handle',
+              // Remove handle option to make entire card draggable
+              delay: 150, // Delay before dragging starts (helps distinguish clicks)
+              delayOnTouchOnly: true, // Only apply delay for touch devices
+              fallbackTolerance: 5, // How many pixels the pointer needs to move to start dragging
               onEnd: (evt) => {
                 const taskId = evt.item.getAttribute('data-task-id');
                 const newStatus = evt.to.getAttribute('data-status') as TaskStatus;
@@ -153,6 +162,20 @@ export const SortableKanban = component$(() => {
     }
   });
 
+  // Open modal to edit a task
+  const openEditModal = $((task: Task) => {
+    console.log('Opening edit modal with task:', task);
+    editTask.value = { ...task }; // Create a copy of the task
+    modalOpen.value = true;
+  });
+
+  // Close modal
+  const closeModal = $(() => {
+    modalOpen.value = false;
+    // Refresh tasks after modal closes
+    refreshTrigger.value++;
+  });
+
   // Status color mapping
   const statusColors = {
     'open': 'border-t-4 border-t-blue-500',
@@ -163,13 +186,14 @@ export const SortableKanban = component$(() => {
 
   // Status icons
   const statusIcons = {
-    'open': '💭',
+    'open': '🌱',
     'doing': '🧹',
-    'done': '🔔',
-    'blocked': '☔'
+    'done': '🟡',
+    'blocked': '🍂'
   };
 
   return (
+    <>
     <div class="zen-container">
       {isLoading.value ? (
         <div class="flex justify-center items-center h-64">
@@ -197,38 +221,45 @@ export const SortableKanban = component$(() => {
                     class="space-y-3 min-h-[100px]"
                   >
                     {getTasksByStatus(status as TaskStatus).map(task => (
-                      <div
-                        key={task.id}
-                        class="task-card border rounded-md p-4 bg-card shadow-sm cursor-move hover:shadow-md transition-all duration-200"
-                        data-task-id={task.id}
-                      >
-                        <div class="flex justify-between items-start mb-2">
-                          <div class="flex items-center">
-                            <span class="text-muted-foreground mr-2 drag-handle">⋮⋮</span>
-                            <h3 class="text-lg font-medium">{task.title}</h3>
+                        <div
+                          key={task.id}
+                          class="task-card border rounded-md p-4 bg-card shadow-sm cursor-move hover:shadow-md transition-all duration-200"
+                          data-task-id={task.id}
+                          onClick$={(e) => {
+                            // We'll rely on Sortable's delay and fallbackTolerance to distinguish
+                            // between clicks and drags. If this handler is called, it's a click.
+                            openEditModal(task);
+                          }}
+                        >
+                          <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center">
+                              <h3 class="text-lg font-medium">{task.title}</h3>
+                            </div>
+                            <div class="text-xs px-2 py-1 rounded-full bg-muted">
+                              {TASK_STATUS_CONFIG[task.status]?.label || 'Unknown'}
+                            </div>
                           </div>
-                          <div class="text-xs px-2 py-1 rounded-full bg-muted">
-                            {TASK_STATUS_CONFIG[task.status]?.label || 'Unknown'}
+                          <div class="haiku-text whitespace-pre-line text-sm mt-3 p-2 bg-muted/10 rounded-md">
+                            {task.content}
+                          </div>
+                          <div class="flex justify-between items-center mt-4">
+                            <div class="text-xs text-muted-foreground flex items-center">
+                              <span class="mr-2">📅</span>
+                              {new Date(task.created_at).toLocaleDateString()}
+                            </div>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick$={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTask(task.id);
+                              }}
+                              class="text-xs"
+                            >
+                              Delete
+                            </Button>
                           </div>
                         </div>
-                        <div class="haiku-text whitespace-pre-line text-sm mt-3 p-2 bg-muted/10 rounded-md">
-                          {task.content}
-                        </div>
-                        <div class="flex justify-between items-center mt-4">
-                          <div class="text-xs text-muted-foreground flex items-center">
-                            <span class="mr-2">📅</span>
-                            {new Date(task.created_at).toLocaleDateString()}
-                          </div>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick$={() => handleDeleteTask(task.id)}
-                            class="text-xs"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
                     ))}
                   </div>
                 </CardContent>
@@ -238,5 +269,14 @@ export const SortableKanban = component$(() => {
         </div>
       )}
     </div>
+
+    {/* Task Modal */}
+    <SimpleTaskModal
+      isOpen={modalOpen.value}
+      onClose={closeModal}
+      editTask={editTask.value}
+      defaultStatus={defaultStatus.value}
+    />
+    </>
   );
 });
