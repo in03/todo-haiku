@@ -170,21 +170,52 @@
 }
 
 /* Scroll arrow animations */
+/* Pulse animation for fixed arrows (with vertical centering) */
 @keyframes pulse {
   0% { transform: translateY(-50%) scale(1); }
   50% { transform: translateY(-50%) scale(1.05); }
   100% { transform: translateY(-50%) scale(1); }
 }
 
+/* Pulse animation for absolute arrows (without vertical centering) */
+@keyframes pulseAbsolute {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
 #left-scroll-arrow, #right-scroll-arrow {
   animation: pulse 2s infinite ease-in-out;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   display: flex !important; /* Force visibility */
+  /* Smooth opacity transition */
+  transition: opacity 0.2s ease-out !important;
 }
 
+#left-scroll-arrow-absolute, #right-scroll-arrow-absolute {
+  animation: pulseAbsolute 2s infinite ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  display: flex !important; /* Force visibility */
+  /* Smooth opacity transition */
+  transition: opacity 0.2s ease-out !important;
+}
+
+/* Fixed arrows (centered in viewport) */
 #left-scroll-arrow:hover, #right-scroll-arrow:hover {
   animation: none;
-  transform: translateY(-50%) scale(1.1);
+  transform: translateY(-50%) scale(1.1) !important;
   background-color: hsl(var(--background));
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  /* Transition for hover effect */
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out !important;
+}
+
+/* Absolute arrows (static position) */
+#left-scroll-arrow-absolute:hover, #right-scroll-arrow-absolute:hover {
+  animation: none;
+  transform: scale(1.1) !important; /* No translateY since we're not centering */
+  background-color: hsl(var(--background));
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  /* Transition for hover effect */
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out !important;
 }
