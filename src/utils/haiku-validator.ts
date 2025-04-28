@@ -1,4 +1,4 @@
-// Import our custom syllable counter
+// Import our simple rule-based syllable counter
 import { countSyllables } from './syllable-counter';
 
 // Define the haiku pattern (5-7-5 syllables)
@@ -15,9 +15,12 @@ export function validateHaiku(text: string): {
 
   // Check if we have exactly 3 lines
   if (lines.length !== 3) {
+    // Count syllables for each line
+    const syllableCounts = lines.map(line => countSyllables(line));
+
     return {
       isValid: false,
-      syllableCounts: lines.map(line => countSyllables(line)),
+      syllableCounts,
       feedback: "A haiku needs exactly three lines."
     };
   }
@@ -56,11 +59,14 @@ export function validateHaiku(text: string): {
     }).filter(Boolean);
 
     if (invalidLines.length === 1) {
-      const { line, expected, actual, diff } = invalidLines[0];
-      if (diff > 0) {
-        feedback = `Line ${line} needs ${diff} more syllable${diff !== 1 ? 's' : ''}.`;
-      } else {
-        feedback = `Line ${line} has ${Math.abs(diff)} too many syllable${Math.abs(diff) !== 1 ? 's' : ''}.`;
+      const invalidLine = invalidLines[0];
+      if (invalidLine) {
+        const { line, diff } = invalidLine;
+        if (diff > 0) {
+          feedback = `Line ${line} needs ${diff} more syllable${diff !== 1 ? 's' : ''}.`;
+        } else {
+          feedback = `Line ${line} has ${Math.abs(diff)} too many syllable${Math.abs(diff) !== 1 ? 's' : ''}.`;
+        }
       }
     } else {
       const feedbacks = [

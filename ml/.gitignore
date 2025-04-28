@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+.env/
+.uv/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Data files (consider if you want to include these in git)
+data/*.csv
+data/*.txt
+data/*.json
+data/*.pkl
+
+# Model files (consider if you want to include these in git)
+models/*.onnx
+models/*.pt
+models/*.h5
+models/*.bin
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -5,6 +5,8 @@ A mindful todo app where tasks are written as haikus, built with Qwik, Supabase,
 ## Features
 
 - **Haiku Validation**: Tasks must be written as haikus (5-7-5 syllable pattern)
+- **Syllable Counting**: Real-time syllable counting for each line using ML via ONNX
+- **Feedback**: Serverless functions for LLM quality rating, critique, and mood.
 - **Kanban Board**: Organize tasks in a beautiful kanban board with haiku-themed statuses
 - **Local-First Architecture**: Works offline with Y.js and IndexedDB
 - **Cloud Sync**: Syncs with Supabase when online
@@ -22,7 +24,8 @@ A mindful todo app where tasks are written as haikus, built with Qwik, Supabase,
 - **Backend**: Supabase (PostgreSQL, Auth)
 - **Local-First**: Y.js, IndexedDB
 - **Drag and Drop**: SortableJS for kanban functionality
-- **Syllable Counting**: Syllable.js for haiku validation
+- **Syllable Counting**: ONNXRuntime for local ML haiku validation using [Kaggle dataset](https://www.kaggle.com/datasets/schwartstack/english-phonetic-and-syllable-count-dictionary?resource=download)
+- **Feedback**: Supabase Serverless Functions for NLP haiku feedback
 - **PWA**: Service Workers, Web Push API (coming soon)
 
 ## Getting Started

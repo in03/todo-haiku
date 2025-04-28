@@ -1,0 +1,1 @@
+{"max_word_len": 22, "vocab_size": 30, "embedding_dim": 64, "hidden_dim": 128, "num_features": 7, "test_accuracy": 67.42857142857143, "balance_method": "undersample", "max_syllables": 9}

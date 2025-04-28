@@ -17,11 +17,24 @@ export default defineConfig(() => {
     server: {
       port: 5173,
       host: 'localhost',
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+      },
     },
     resolve: {
       alias: {
         '~': resolve(__dirname, 'src'),
       },
     },
+    optimizeDeps: {
+      exclude: ['onnxruntime-web'],
+    },
+    build: {
+      commonjsOptions: {
+        include: [/onnxruntime-web/, /node_modules/],
+      },
+    },
+    assetsInclude: ['**/*.wasm'],
   };
 });

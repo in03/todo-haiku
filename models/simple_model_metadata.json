@@ -1,0 +1,6 @@
+{
+  "vocab_size": 21,
+  "embed_dim": 16,
+  "hidden_dim": 32,
+  "max_word_len": 11
+}

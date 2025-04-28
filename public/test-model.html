@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Model Files</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Model Files</h1>
+    <div id="results"></div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        async function testFile(url) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result';
+            resultsDiv.appendChild(resultDiv);
+
+            try {
+                resultDiv.textContent = `Testing ${url}...`;
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    resultDiv.textContent = `✅ ${url} - Success (${response.status} ${response.statusText})`;
+                    resultDiv.classList.add('success');
+                    
+                    // Try to read the content if it's JSON
+                    if (url.endsWith('.json')) {
+                        const data = await response.json();
+                        const dataDiv = document.createElement('pre');
+                        dataDiv.textContent = JSON.stringify(data, null, 2);
+                        resultDiv.appendChild(dataDiv);
+                    }
+                } else {
+                    resultDiv.textContent = `❌ ${url} - Failed (${response.status} ${response.statusText})`;
+                    resultDiv.classList.add('error');
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ ${url} - Error: ${error.message}`;
+                resultDiv.classList.add('error');
+            }
+        }
+
+        // Test all model files
+        async function runTests() {
+            await testFile('./models/syllable_counter.onnx');
+            await testFile('./models/char_vocab.json');
+            await testFile('./models/model_metadata.json');
+        }
+
+        // Run tests when page loads
+        window.onload = runTests;
+    </script>
+</body>
+</html>
