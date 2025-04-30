@@ -1,0 +1,196 @@
+<div class="mx-auto px-4 py-6 max-w-4xl">
+  <h1 class="text-3xl font-bold mb-6">Todo Haikus 🍃</h1>
+
+  <div class="mb-6">
+    <div class="flex items-center gap-4 mb-6">
+      <button 
+        phx-click="filter" 
+        phx-value-filter="all" 
+        class={["px-3 py-1 rounded-md text-sm", @filter == "all" && "bg-indigo-600 text-white" || "bg-gray-100 text-gray-700 hover:bg-gray-200"]}>
+        All
+      </button>
+      <button 
+        phx-click="filter" 
+        phx-value-filter="active"
+        class={["px-3 py-1 rounded-md text-sm", @filter == "active" && "bg-indigo-600 text-white" || "bg-gray-100 text-gray-700 hover:bg-gray-200"]}>
+        Active
+      </button>
+      <button 
+        phx-click="filter" 
+        phx-value-filter="completed"
+        class={["px-3 py-1 rounded-md text-sm", @filter == "completed" && "bg-indigo-600 text-white" || "bg-gray-100 text-gray-700 hover:bg-gray-200"]}>
+        Completed
+      </button>
+      
+      <div class="ml-auto">
+        <.link patch={~p"/tasks/new"} class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+          New Task
+        </.link>
+      </div>
+    </div>
+
+    <%= if Enum.empty?(@tasks) do %>
+      <div class="text-center py-10 bg-gray-50 rounded-lg">
+        <p class="text-gray-500">No tasks found. Create a new one!</p>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <%= for task <- @tasks do %>
+          <div class="bg-white shadow rounded-lg p-4 border-l-4 border-indigo-400">
+            <div class="flex justify-between items-start">
+              <h3 class={if task.is_completed, do: "text-lg font-medium line-through text-gray-400", else: "text-lg font-medium"}>
+                <%= task.title %>
+              </h3>
+              <div class="flex space-x-2 items-center">
+                <button 
+                  phx-click="toggle" 
+                  phx-value-id={task.id} 
+                  class={if task.is_completed, do: "text-green-500 hover:text-green-600", else: "text-gray-400 hover:text-gray-600"}
+                  aria-label={if task.is_completed, do: "Mark as incomplete", else: "Mark as complete"}>
+                  <%= if task.is_completed do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  <% else %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h10m-10 4h10" />
+                    </svg>
+                  <% end %>
+                </button>
+                <.link patch={~p"/tasks/#{task}/edit"} class="text-gray-400 hover:text-gray-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </.link>
+                <button 
+                  phx-click="delete" 
+                  phx-value-id={task.id} 
+                  data-confirm="Are you sure you want to delete this task?"
+                  class="text-red-500 hover:text-red-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="mt-2 whitespace-pre-line font-serif text-gray-700">
+              <%= task.content %>
+            </div>
+            <div class="mt-2 flex justify-between items-center">
+              <span class="text-xs text-gray-500">
+                <%= task.status %>
+              </span>
+              <span class="text-xs text-gray-500">
+                <%= Calendar.strftime(task.inserted_at, "%B %d, %Y") %>
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<.modal :if={@live_action in [:new, :edit]} id="task-modal" show on_cancel={JS.patch(~p"/tasks")}>
+  <div class="py-4 px-6">
+    <.header>
+      <%= @page_title %>
+      <:subtitle>Create a new task with a haiku description</:subtitle>
+    </.header>
+
+    <.simple_form
+      for={@form}
+      id="task-form"
+      phx-change="validate"
+      phx-submit="save"
+      phx-trigger-action={@trigger_submit}
+    >
+      <.input field={@form[:title]} type="text" label="Task Title" required />
+      <%= if @form[:title].errors != [] do %>
+        <div class="mt-1 text-sm text-red-600">
+          <%= Enum.map(@form[:title].errors, fn {msg, _} -> msg end) |> Enum.join(", ") %>
+        </div>
+      <% end %>
+      
+      <div class="mb-4">
+        <div class="flex justify-between items-center mb-1">
+          <.label for={@form[:content].id}>Task Description (as a Haiku)</.label>
+          <button type="button" phx-click="generate_template" class="text-xs text-indigo-600 hover:text-indigo-800">
+            Generate Template
+          </button>
+        </div>
+        
+        <.input field={@form[:content]} type="textarea" rows="6" phx-debounce="0" class="font-serif resize-none" required />
+        
+        <%= if @form[:content].errors != [] do %>
+          <div class="mt-1 text-sm text-red-600">
+            <%= Enum.map(@form[:content].errors, fn {msg, _} -> msg end) |> Enum.join(", ") %>
+          </div>
+        <% end %>
+        
+        <div class="mt-1 flex justify-between text-xs text-gray-500">
+          <span class={[
+            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "text-green-500 font-semibold",
+            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) > 0 && Enum.at(@debug_info.syllable_counts, 0) != 5 && "text-amber-500"
+          ]}>
+            Line 1: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0)) || 0 %>/5 syllables
+          </span>
+          <span class={[
+            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "text-green-500 font-semibold",
+            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) > 0 && Enum.at(@debug_info.syllable_counts, 1) != 7 && "text-amber-500"
+          ]}>
+            Line 2: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1)) || 0 %>/7 syllables
+          </span>
+          <span class={[
+            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "text-green-500 font-semibold",
+            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) > 0 && Enum.at(@debug_info.syllable_counts, 2) != 5 && "text-amber-500"
+          ]}>
+            Line 3: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2)) || 0 %>/5 syllables
+          </span>
+        </div>
+        
+        <p class={if @debug_info.is_valid, do: "text-sm mt-2 text-green-500 font-medium", else: "text-sm mt-2 text-amber-500"}>
+          <%= @form.data.feedback || "" %>
+        </p>
+        
+        <!-- Debug Information -->
+        <div class="mt-4 p-3 bg-gray-100 rounded-md text-xs">
+          <p><strong>Debug Info:</strong></p>
+          <p>Is Valid Haiku: <%= inspect(@form.data.is_valid_haiku) %></p>
+          <p>Syllable Counts: <%= inspect(@form.data.syllable_counts) %></p>
+          <p>Form Errors: <%= inspect(@form.errors) %></p>
+          <p>Validation Count: <%= @debug_info.validation_count %></p>
+          <p>Last Validation: <%= @debug_info.last_validation && DateTime.to_string(@debug_info.last_validation) %></p>
+        </div>
+        
+        <div class="mt-2 h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+          <div class={[
+            "h-full transition-all duration-300",
+            @form.data.is_valid_haiku && "bg-green-500",
+            !@form.data.is_valid_haiku && "bg-amber-500"
+          ]} style={"width: #{(@form.data.syllable_counts && (Enum.sum(@form.data.syllable_counts) / 17.0 * 100)) || 0}%"}></div>
+        </div>
+      </div>
+      
+      <.input field={@form[:status]} type="select" options={[{"Open", "open"}, {"Doing", "doing"}, {"Done", "done"}, {"Blocked", "blocked"}]} label="Status" />
+      <.input field={@form[:is_completed]} type="checkbox" label="Completed" />
+
+      <:actions>
+        <!-- Debug for button conditions -->
+        <div class="mb-2 p-2 bg-gray-100 rounded-md text-xs">
+          <p>Title empty: <%= @form[:title].value == "" %></p>
+          <p>Is valid haiku: <%= @debug_info.is_valid %></p>
+          <p>Button should be disabled: <%= !@debug_info.is_valid || @form[:title].value == "" %></p>
+        </div>
+        
+        <.button 
+          type="submit" 
+          class={if !@debug_info.is_valid || @form[:title].value == "", do: "w-full opacity-50 cursor-not-allowed", else: "w-full"}
+          phx-disable-with="Saving..." 
+          disabled={!@debug_info.is_valid || @form[:title].value == ""}>
+          <%= if @debug_info.is_valid && @form[:title].value != "", do: "Save Task", else: "Complete form to save" %>
+        </.button>
+      </:actions>
+    </.simple_form>
+  </div>
+</.modal> 

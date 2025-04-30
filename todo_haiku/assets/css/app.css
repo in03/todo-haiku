@@ -1,0 +1,43 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* This file is for your main application CSS */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap');
+
+@layer components {
+  .zen-container {
+    @apply max-w-2xl mx-auto p-4;
+  }
+
+  .haiku-card {
+    @apply bg-white shadow-md rounded-lg p-4 mb-4 border-l-4 border-indigo-400 hover:shadow-lg transition-shadow;
+  }
+
+  .haiku-text {
+    @apply font-serif text-gray-700 mt-2;
+  }
+}
+
+/* Styling for haiku textarea */
+textarea.font-serif {
+  font-family: 'Noto Serif', serif;
+}
+
+/* Status badge styles */
+.status-open {
+  @apply bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs;
+}
+
+.status-doing {
+  @apply bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full text-xs;
+}
+
+.status-done {
+  @apply bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs;
+}
+
+.status-blocked {
+  @apply bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs;
+}
