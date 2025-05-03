@@ -18,7 +18,7 @@
   }
 
   .haiku-card {
-    @apply bg-card shadow-md rounded-lg p-4 mb-4 border-l-4 border-accent hover:shadow-lg transition-shadow;
+    @apply bg-card shadow-md rounded-lg p-4 mb-4 border-l-4 border-green-500 hover:shadow-lg transition-shadow;
   }
 
   .haiku-text {
@@ -99,7 +99,7 @@ textarea.font-serif {
 /* Sortable.js classes */
 .task-ghost {
   opacity: 0.4;
-  @apply bg-card border border-dashed border-accent;
+  @apply bg-card border border-dashed border-green-500;
 }
 
 .task-chosen {

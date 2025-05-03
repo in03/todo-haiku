@@ -79,10 +79,19 @@ defmodule TodoHaikuWeb.TodoLive.Index do
       |> Ecto.Changeset.put_change(:syllable_counts, syllable_counts)
       |> Ecto.Changeset.put_change(:feedback, feedback)
 
+    # Update debug info with validation results
+    debug_info = %{
+      last_validation: DateTime.utc_now(),
+      validation_count: 1,
+      is_valid: is_valid,
+      syllable_counts: syllable_counts
+    }
+
     socket
     |> assign(:page_title, "Edit Haiku Task")
     |> assign(:task, task)
     |> assign(:form, to_form(changeset))
+    |> assign(:debug_info, debug_info)
   end
 
   @impl true
