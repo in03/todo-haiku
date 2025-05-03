@@ -6,17 +6,27 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap');
 
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
 @layer components {
   .zen-container {
-    @apply max-w-2xl mx-auto p-4;
+    @apply max-w-7xl mx-auto p-4;
   }
 
   .haiku-card {
-    @apply bg-white shadow-md rounded-lg p-4 mb-4 border-l-4 border-indigo-400 hover:shadow-lg transition-shadow;
+    @apply bg-card shadow-md rounded-lg p-4 mb-4 border-l-4 border-accent hover:shadow-lg transition-shadow;
   }
 
   .haiku-text {
-    @apply font-serif text-gray-700 mt-2;
+    @apply font-serif text-foreground mt-2;
+  }
+  
+  .task-search {
+    @apply bg-card text-foreground border border-border rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-1 focus:ring-green-500 transition-all duration-200;
   }
 }
 
@@ -27,17 +37,97 @@ textarea.font-serif {
 
 /* Status badge styles */
 .status-open {
-  @apply bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs;
+  @apply bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full text-xs;
 }
 
 .status-doing {
-  @apply bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full text-xs;
+  @apply bg-yellow-900 text-yellow-200 px-2 py-0.5 rounded-full text-xs;
 }
 
 .status-done {
-  @apply bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs;
+  @apply bg-green-900 text-green-200 px-2 py-0.5 rounded-full text-xs;
 }
 
 .status-blocked {
-  @apply bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs;
+  @apply bg-red-900 text-red-200 px-2 py-0.5 rounded-full text-xs;
+}
+
+/* Kanban board styles */
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  height: calc(100vh - 250px);
+  transition: all 0.3s ease;
+}
+
+.kanban-column-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+}
+
+.kanban-column-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.kanban-column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-column-content::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.5);
+  border-radius: 3px;
+}
+
+.task-card {
+  transition: all 0.2s ease;
+  @apply bg-card border border-border text-foreground;
+}
+
+.task-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Column header icons */
+.column-icon {
+  @apply text-lg mr-2;
+}
+
+/* Sortable.js classes */
+.task-ghost {
+  opacity: 0.4;
+  @apply bg-card border border-dashed border-accent;
+}
+
+.task-chosen {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1) !important;
+  transform: scale(1.02);
+}
+
+.task-drag {
+  opacity: 0.8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  #kanban-board {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  #kanban-board {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .kanban-column {
+    min-height: 300px;
+    height: auto;
+    margin-bottom: 16px;
+  }
 }

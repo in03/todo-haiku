@@ -9,7 +9,7 @@ defmodule TodoHaiku.Todos.Task do
     field :status, :string
     field :title, :string
     field :content, :string
-    field :is_completed, :boolean, default: false
+    field :position, :integer, default: 0
     field :syllable_counts, {:array, :integer}, virtual: true
     field :is_valid_haiku, :boolean, virtual: true
     field :feedback, :string, virtual: true
@@ -18,22 +18,21 @@ defmodule TodoHaiku.Todos.Task do
   end
 
   # Implementing Access behaviour callbacks
-  @impl true
+  @impl Access
   def fetch(struct, key) do
     Map.fetch(struct, key)
   end
 
-  @impl true
   def get(struct, key, default \\ nil) do
     Map.get(struct, key, default)
   end
 
-  @impl true
+  @impl Access
   def get_and_update(struct, key, fun) do
     Map.get_and_update(struct, key, fun)
   end
 
-  @impl true
+  @impl Access
   def pop(struct, key) do
     {get(struct, key), Map.drop(struct, [key])}
   end
@@ -43,7 +42,7 @@ defmodule TodoHaiku.Todos.Task do
     IO.puts("Task changeset called with attrs: #{inspect(attrs)}")
 
     task
-    |> cast(attrs, [:title, :content, :is_completed, :status])
+    |> cast(attrs, [:title, :content, :status, :position])
     |> validate_required([:title, :content])
     |> validate_status()
     |> validate_haiku()

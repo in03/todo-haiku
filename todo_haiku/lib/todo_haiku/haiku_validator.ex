@@ -8,58 +8,52 @@ defmodule TodoHaiku.HaikuValidator do
 
   # Define special cases and exceptions
   @special_cases %{
-    "every" => 2,
-    "different" => 3,
-    "beautiful" => 3,
-    "interesting" => 3,
-    "experience" => 4,
-    "favorite" => 3,
-    "family" => 3,
-    "evening" => 2,
-    "area" => 3,
-    "hour" => 1,
-    "fire" => 1,
-    "poem" => 2,
-    "poems" => 2,
-    "quiet" => 2,
-    "science" => 2,
-    "society" => 3,
-    "though" => 1,
-    "through" => 1,
-    "throughout" => 2,
-    "wednesday" => 3,
-    "forest" => 2,
-    "poetry" => 3,
-    "haiku" => 2,
-    "syllable" => 3,
-    "syllables" => 3,
-    "deadline" => 2,
-    "approaching" => 3,
-    # Additional common words with tricky syllable counts
     "actually" => 4,
+    "approaching" => 3,
+    "area" => 3,
     "basically" => 3,
     "beautiful" => 3,
+    "being" => 2,
     "business" => 2,
     "completely" => 3,
+    "create" => 2,
+    "deadline" => 2,
     "definitely" => 4,
     "different" => 3,
     "evening" => 2,
     "every" => 2,
     "everything" => 3,
+    "experience" => 4,
+    "family" => 3,
+    "favorite" => 3,
+    "fire" => 1,
+    "forest" => 2,
+    "generally" => 4,
+    "going" => 2,
+    "government" => 3,
+    "haiku" => 2,
+    "hour" => 1,
     "interesting" => 3,
     "literally" => 4,
     "memory" => 3,
     "natural" => 2,
-    "generally" => 4,
-    "government" => 3,
+    "poem" => 2,
+    "poems" => 2,
+    "poetry" => 3,
+    "power" => 2,
     "probably" => 3,
+    "quiet" => 2,
+    "science" => 2,
     "separately" => 4,
     "several" => 2,
+    "society" => 3,
+    "syllable" => 3,
+    "syllables" => 3,
+    "though" => 1,
+    "through" => 1,
+    "throughout" => 2,
     "vegetable" => 4,
-    "being" => 2,
-    "create" => 2,
-    "going" => 2,
-    "power" => 2
+    "wednesday" => 3
   }
 
   @doc """
@@ -102,18 +96,32 @@ defmodule TodoHaiku.HaikuValidator do
   end
 
   @doc """
-  Generates a random haiku template to inspire users.
+  Generates a template haiku to help users get started.
   """
   def generate_template do
-    templates = [
-      "Morning sun rises\nDew drops glisten on green leaves\nA new day begins",
-      "Typing on keyboard\nThoughts flow into characters\nTasks become haikus",
-      "Mountain silhouette\nShadows dance across the lake\nPeace in solitude",
-      "Deadline approaching\nFingers race across the keys\nWork becomes a blur",
-      "Empty task list waits\nIdeas form in my mind\nTime to write them down"
+    # Choose a random example from our list
+    examples = [
+      {"Do Laundry",
+       "High piles of laundry\nGetting so tired of this\nWhen will it all end?"},
+
+      {"Morning Exercise",
+       "Early morning run\nFeet pounding on the pavement\nStrength builds with each step"},
+
+      {"Study Session",
+       "Books spread on the desk\nKnowledge flows through fingertips\nMind grows like a tree"},
+
+      {"Self Care Evening",
+       "Candles flicker soft\nRelaxation washes through\nTime just for myself"},
+
+      {"Grocery Shopping",
+       "Empty pantry calls\nWheels squeak along tile floors\nFridge now overflows"}
     ]
 
-    Enum.random(templates)
+    # Pick a random example
+    {_title, haiku} = Enum.random(examples)
+
+    # Return the haiku text
+    haiku
   end
 
   # Generate feedback based on validation results
@@ -225,25 +233,25 @@ defmodule TodoHaiku.HaikuValidator do
         String.ends_with?(word, "ing") ->
           if String.match?(word, ~r/[aeiouy]ing$/) do
             # If vowel before "ing", count separately (e.g., "flying" = 2)
-            count_without_suffix = count_by_vowel_groups(String.slice(word, 0..-4))
+            count_without_suffix = count_by_vowel_groups(String.slice(word, 0..(String.length(word) - 4)//1))
             count_without_suffix + 1
           else
             # Otherwise, count as part of syllable (e.g., "sing" = 1)
-            count_without_suffix = count_by_vowel_groups(String.slice(word, 0..-4))
+            count_without_suffix = count_by_vowel_groups(String.slice(word, 0..(String.length(word) - 4)//1))
             count_without_suffix
           end
 
         # Handle -es, -ed endings
         String.ends_with?(word, "es") and String.length(word) > 3 and not String.contains?(vowels, String.at(word, String.length(word) - 3)) ->
-          count_without_suffix = count_by_vowel_groups(String.slice(word, 0..-3))
+          count_without_suffix = count_by_vowel_groups(String.slice(word, 0..(String.length(word) - 3)//1))
           count_without_suffix
 
         String.ends_with?(word, "e") and String.length(word) > 2 and not String.contains?(vowels, String.at(word, String.length(word) - 2)) ->
-          count_without_suffix = count_by_vowel_groups(String.slice(word, 0..-2))
+          count_without_suffix = count_by_vowel_groups(String.slice(word, 0..(String.length(word) - 2)//1))
           count_without_suffix
 
         String.ends_with?(word, "ed") and String.length(word) > 3 and not String.contains?(vowels, String.at(word, String.length(word) - 3)) ->
-          count_without_suffix = count_by_vowel_groups(String.slice(word, 0..-3))
+          count_without_suffix = count_by_vowel_groups(String.slice(word, 0..(String.length(word) - 3)//1))
           count_without_suffix
 
         # Otherwise, count vowel groups

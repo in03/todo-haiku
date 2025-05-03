@@ -14,20 +14,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: "#6366F1", // Indigo-500
+        brand: "#9d8cff", // Custom purple
         accent: {
-          DEFAULT: "#6366F1", // Indigo-500
+          DEFAULT: "#9d8cff", // Custom purple
           foreground: "#FFFFFF",
         },
         muted: {
-          DEFAULT: "#F3F4F6", // Gray-100
-          foreground: "#6B7280", // Gray-500
+          DEFAULT: "#2a2a2a", // Dark gray (for dark mode)
+          foreground: "#a0a0a0", // Light gray for text on dark
         },
-        foreground: "#1F2937", // Gray-800
-        border: "#E5E7EB", // Gray-200
-        background: "#FFFFFF",
+        foreground: "#f2f2f2", // Light gray for text
+        border: "#3a3a3a", // Darker gray for borders
+        background: "#1a1a1a", // Very dark gray
+        card: "#222222", // Slightly lighter than background
         destructive: {
-          DEFAULT: "#EF4444", // Red-500
+          DEFAULT: "#ff6b6b", // Soft red
           foreground: "#FFFFFF",
         },
       },
@@ -37,6 +38,12 @@ module.exports = {
       boxShadow: {
         task: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
         'task-hover': '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)',
+      },
+      minHeight: {
+        'kanban-column': '500px', // Increase the minimum height for kanban columns
+      },
+      width: {
+        'kanban-board': '100%', // Full width for the kanban board
       },
     },
   },

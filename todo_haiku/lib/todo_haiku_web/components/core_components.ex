@@ -50,7 +50,7 @@ defmodule TodoHaikuWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
+      <div id={"#{@id}-bg"} class="bg-black/70 fixed inset-0 transition-opacity" aria-hidden="true" />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -60,13 +60,13 @@ defmodule TodoHaikuWeb.CoreComponents do
         tabindex="0"
       >
         <div class="flex min-h-full items-center justify-center">
-          <div class="w-full max-w-3xl p-4 sm:p-6 lg:py-8">
+          <div class="w-full max-w-lg p-6 sm:p-6 lg:py-8">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-card p-6 shadow-lg ring-1 transition"
             >
               <div class="absolute top-6 right-5">
                 <button
@@ -196,13 +196,15 @@ defmodule TodoHaikuWeb.CoreComponents do
     include: ~w(autocomplete name rel action enctype method novalidate target multipart),
     doc: "the arbitrary HTML attributes to apply to the form tag"
 
+  attr :class, :string, default: nil
+
   slot :inner_block, required: true
   slot :actions, doc: "the slot for form actions, such as a submit button"
 
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 bg-white">
+      <div class={[@class, "space-y-8 bg-card text-foreground p-0"]}>
         {render_slot(@inner_block, f)}
         <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
           {render_slot(action, f)}
@@ -231,7 +233,7 @@ defmodule TodoHaikuWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
+        "phx-submit-loading:opacity-75 rounded-lg bg-green-500 hover:bg-green-600 py-2 px-3",
         "text-sm font-semibold leading-6 text-white active:text-white/80",
         @class
       ]}
@@ -329,13 +331,14 @@ defmodule TodoHaikuWeb.CoreComponents do
   end
 
   def input(%{type: "select"} = assigns) do
+    assigns = assign_new(assigns, :class, fn -> assigns[:rest][:class] end)
     ~H"""
     <div>
       <.label for={@id}>{@label}</.label>
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
+        class={["mt-2 block w-full rounded-md border border-border bg-muted/80 text-foreground shadow-sm focus:border-accent focus:ring-accent sm:text-sm", @class]}
         multiple={@multiple}
         {@rest}
       >
@@ -348,6 +351,7 @@ defmodule TodoHaikuWeb.CoreComponents do
   end
 
   def input(%{type: "textarea"} = assigns) do
+    assigns = assign_new(assigns, :class, fn -> assigns[:rest][:class] end)
     ~H"""
     <div>
       <.label for={@id}>{@label}</.label>
@@ -355,9 +359,9 @@ defmodule TodoHaikuWeb.CoreComponents do
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 min-h-[6rem]",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "mt-2 block w-full rounded-md bg-muted/80 text-foreground border border-border focus:border-accent focus:ring-accent sm:text-sm sm:leading-6 min-h-[6rem]",
+          @errors != [] && "border-rose-400 focus:border-rose-400",
+          @class
         ]}
         {@rest}
       >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -368,6 +372,7 @@ defmodule TodoHaikuWeb.CoreComponents do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
+    assigns = assign_new(assigns, :class, fn -> assigns[:rest][:class] end)
     ~H"""
     <div>
       <.label for={@id}>{@label}</.label>
@@ -377,9 +382,9 @@ defmodule TodoHaikuWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "mt-2 block w-full rounded-md bg-muted/80 text-foreground border border-border focus:border-accent focus:ring-accent sm:text-sm sm:leading-6",
+          @errors != [] && "border-rose-400 focus:border-rose-400",
+          @class
         ]}
         {@rest}
       />
@@ -396,7 +401,7 @@ defmodule TodoHaikuWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
+    <label for={@for} class="block text-sm font-semibold leading-6 text-foreground">
       {render_slot(@inner_block)}
     </label>
     """

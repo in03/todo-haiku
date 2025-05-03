@@ -1,102 +1,192 @@
-<div class="mx-auto px-4 py-6 max-w-4xl">
-  <h1 class="text-3xl font-bold mb-6">Todo Haikus 🍃</h1>
+<div class="mx-auto px-4 py-6 w-full">
+  <h1 class="text-3xl font-bold mb-6 text-green-500">Todo Haiku 🍃</h1>
 
   <div class="mb-6">
-    <div class="flex items-center gap-4 mb-6">
-      <button 
-        phx-click="filter" 
-        phx-value-filter="all" 
-        class={["px-3 py-1 rounded-md text-sm", @filter == "all" && "bg-indigo-600 text-white" || "bg-gray-100 text-gray-700 hover:bg-gray-200"]}>
-        All
-      </button>
-      <button 
-        phx-click="filter" 
-        phx-value-filter="active"
-        class={["px-3 py-1 rounded-md text-sm", @filter == "active" && "bg-indigo-600 text-white" || "bg-gray-100 text-gray-700 hover:bg-gray-200"]}>
-        Active
-      </button>
-      <button 
-        phx-click="filter" 
-        phx-value-filter="completed"
-        class={["px-3 py-1 rounded-md text-sm", @filter == "completed" && "bg-indigo-600 text-white" || "bg-gray-100 text-gray-700 hover:bg-gray-200"]}>
-        Completed
-      </button>
+    <div class="flex flex-col md:flex-row items-center gap-4 mb-6">
+      <div class="relative w-full md:w-64">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input 
+          type="text" 
+          placeholder="Search tasks..." 
+          class="task-search pl-10"
+          phx-keyup="search" 
+          phx-debounce="300" 
+          name="search"
+        />
+      </div>
       
       <div class="ml-auto">
-        <.link patch={~p"/tasks/new"} class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+        <.link patch={~p"/tasks/new"} class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">
           New Task
         </.link>
       </div>
     </div>
 
     <%= if Enum.empty?(@tasks) do %>
-      <div class="text-center py-10 bg-gray-50 rounded-lg">
-        <p class="text-gray-500">No tasks found. Create a new one!</p>
+      <div class="text-center py-10 bg-card rounded-lg">
+        <p class="text-muted-foreground">No tasks found. Create a new one!</p>
       </div>
     <% else %>
-      <div class="space-y-4">
-        <%= for task <- @tasks do %>
-          <div class="bg-white shadow rounded-lg p-4 border-l-4 border-indigo-400">
-            <div class="flex justify-between items-start">
-              <h3 class={if task.is_completed, do: "text-lg font-medium line-through text-gray-400", else: "text-lg font-medium"}>
-                <%= task.title %>
-              </h3>
-              <div class="flex space-x-2 items-center">
-                <button 
-                  phx-click="toggle" 
-                  phx-value-id={task.id} 
-                  class={if task.is_completed, do: "text-green-500 hover:text-green-600", else: "text-gray-400 hover:text-gray-600"}
-                  aria-label={if task.is_completed, do: "Mark as incomplete", else: "Mark as complete"}>
-                  <%= if task.is_completed do %>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  <% else %>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h10m-10 4h10" />
-                    </svg>
-                  <% end %>
-                </button>
-                <.link patch={~p"/tasks/#{task}/edit"} class="text-gray-400 hover:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </.link>
-                <button 
-                  phx-click="delete" 
-                  phx-value-id={task.id} 
-                  data-confirm="Are you sure you want to delete this task?"
-                  class="text-red-500 hover:text-red-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div class="mt-2 whitespace-pre-line font-serif text-gray-700">
-              <%= task.content %>
-            </div>
-            <div class="mt-2 flex justify-between items-center">
-              <span class="text-xs text-gray-500">
-                <%= task.status %>
-              </span>
-              <span class="text-xs text-gray-500">
-                <%= Calendar.strftime(task.inserted_at, "%B %d, %Y") %>
-              </span>
-            </div>
+      <!-- Kanban Board -->
+      <div id="kanban-board" class="grid grid-cols-4 gap-6" phx-hook="KanbanBoard">
+        <!-- Open Column -->
+        <div class="kanban-column bg-card rounded-lg shadow-md">
+          <div class="p-3 bg-muted rounded-t-lg border-b border-border">
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🌱</span>
+              Seed
+            </h3>
           </div>
-        <% end %>
+          <div class="kanban-column-content p-2 min-h-[500px]" data-column="open">
+            <%= for task <- Enum.filter(@tasks, fn t -> 
+                t.status == "open" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) do %>
+              <div class="task-card bg-card p-3 rounded shadow mb-2 cursor-move" data-task-id={task.id}>
+                <div class="flex justify-between items-start">
+                  <h4 class="text-sm font-medium text-foreground">
+                    <%= task.title %>
+                  </h4>
+                  <div class="flex space-x-1 items-center">
+                    <.link patch={~p"/tasks/#{task}/edit"} class="text-muted-foreground hover:text-foreground transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </.link>
+                  </div>
+                </div>
+                <div class="mt-1 text-xs italic font-serif text-muted-foreground line-clamp-2">
+                  <%= task.content %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Doing Column -->
+        <div class="kanban-column bg-card rounded-lg shadow-md">
+          <div class="p-3 bg-muted rounded-t-lg border-b border-border">
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🧹</span>
+              Tend
+            </h3>
+          </div>
+          <div class="kanban-column-content p-2 min-h-[500px]" data-column="doing">
+            <%= for task <- Enum.filter(@tasks, fn t -> 
+                t.status == "doing" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) do %>
+              <div class="task-card bg-card p-3 rounded shadow mb-2 cursor-move" data-task-id={task.id}>
+                <div class="flex justify-between items-start">
+                  <h4 class="text-sm font-medium text-foreground">
+                    <%= task.title %>
+                  </h4>
+                  <div class="flex space-x-1 items-center">
+                    <.link patch={~p"/tasks/#{task}/edit"} class="text-muted-foreground hover:text-foreground transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </.link>
+                  </div>
+                </div>
+                <div class="mt-1 text-xs italic font-serif text-muted-foreground line-clamp-2">
+                  <%= task.content %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Done Column -->
+        <div class="kanban-column bg-card rounded-lg shadow-md">
+          <div class="p-3 bg-muted rounded-t-lg border-b border-border">
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🍎</span>
+              Fruit
+            </h3>
+          </div>
+          <div class="kanban-column-content p-2 min-h-[500px]" data-column="done">
+            <%= for task <- Enum.filter(@tasks, fn t -> 
+                t.status == "done" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) do %>
+              <div class="task-card bg-card p-3 rounded shadow mb-2 cursor-move" data-task-id={task.id}>
+                <div class="flex justify-between items-start">
+                  <h4 class="text-sm font-medium text-foreground">
+                    <%= task.title %>
+                  </h4>
+                  <div class="flex space-x-1 items-center">
+                    <.link patch={~p"/tasks/#{task}/edit"} class="text-muted-foreground hover:text-foreground transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </.link>
+                  </div>
+                </div>
+                <div class="mt-1 text-xs italic font-serif text-muted-foreground line-clamp-2">
+                  <%= task.content %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Blocked Column -->
+        <div class="kanban-column bg-card rounded-lg shadow-md">
+          <div class="p-3 bg-muted rounded-t-lg border-b border-border">
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🍂</span>
+              Withheld
+            </h3>
+          </div>
+          <div class="kanban-column-content p-2 min-h-[500px]" data-column="blocked">
+            <%= for task <- Enum.filter(@tasks, fn t -> 
+                t.status == "blocked" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) do %>
+              <div class="task-card bg-card p-3 rounded shadow mb-2 cursor-move" data-task-id={task.id}>
+                <div class="flex justify-between items-start">
+                  <h4 class="text-sm font-medium text-foreground">
+                    <%= task.title %>
+                  </h4>
+                  <div class="flex space-x-1 items-center">
+                    <.link patch={~p"/tasks/#{task}/edit"} class="text-muted-foreground hover:text-foreground transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </.link>
+                  </div>
+                </div>
+                <div class="mt-1 text-xs italic font-serif text-muted-foreground line-clamp-2">
+                  <%= task.content %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
       </div>
     <% end %>
   </div>
 </div>
 
 <.modal :if={@live_action in [:new, :edit]} id="task-modal" show on_cancel={JS.patch(~p"/tasks")}>
-  <div class="py-4 px-6">
-    <.header>
-      <%= @page_title %>
-      <:subtitle>Create a new task with a haiku description</:subtitle>
-    </.header>
+  <div class="max-w-xl mx-auto my-12 rounded-xl shadow-2xl bg-card text-foreground p-8 border border-border">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-foreground mb-1"><%= @page_title %></h2>
+      <p class="text-muted-foreground text-sm">Create a new task with a haiku description</p>
+    </div>
 
     <.simple_form
       for={@form}
@@ -105,90 +195,89 @@
       phx-submit="save"
       phx-trigger-action={@trigger_submit}
     >
-      <.input field={@form[:title]} type="text" label="Task Title" required />
+      <.input field={@form[:title]} type="text" placeholder="Task Title" class="bg-muted/80 text-foreground border border-border rounded-md focus:ring-green-500" />
       <%= if @form[:title].errors != [] do %>
-        <div class="mt-1 text-sm text-red-600">
-          <%= Enum.map(@form[:title].errors, fn {msg, _} -> msg end) |> Enum.join(", ") %>
+        <div class="mt-1 text-sm text-destructive">
+          Task title is required
         </div>
       <% end %>
       
       <div class="mb-4">
         <div class="flex justify-between items-center mb-1">
-          <.label for={@form[:content].id}>Task Description (as a Haiku)</.label>
-          <button type="button" phx-click="generate_template" class="text-xs text-indigo-600 hover:text-indigo-800">
-            Generate Template
+          <span class="text-sm text-foreground">Wax poetic...</span>
+          <button type="button" phx-click="generate_template" class="text-xs text-green-500 hover:text-green-400">
+            ✨ Example
           </button>
         </div>
         
-        <.input field={@form[:content]} type="textarea" rows="6" phx-debounce="0" class="font-serif resize-none" required />
+        <.input field={@form[:content]} type="textarea" rows="3" phx-debounce="0" placeholder="Write your haiku here..." class="font-serif resize-none bg-muted/80 text-foreground border border-border rounded-md focus:ring-green-500" required />
         
-        <%= if @form[:content].errors != [] do %>
-          <div class="mt-1 text-sm text-red-600">
-            <%= Enum.map(@form[:content].errors, fn {msg, _} -> msg end) |> Enum.join(", ") %>
+        <div class="mt-3 flex justify-between text-xs text-muted-foreground">
+          <div class="flex-1 relative z-10">
+            <span class={[
+              "block py-1 px-2 z-10 relative",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "text-foreground",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5) && "text-muted-foreground"
+            ]}>
+              Line 1: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0)) || 0 %>/5
+            </span>
+            <div class={[
+              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out rounded-l-md",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "bg-green-500/10 border border-green-500",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5) && "bg-transparent"
+            ]}></div>
           </div>
+          <div class="flex-1 relative z-20 -mx-[1px]">
+            <span class={[
+              "block py-1 px-2 z-10 relative",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "text-foreground",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7) && "text-muted-foreground"
+            ]}>
+              Line 2: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1)) || 0 %>/7
+            </span>
+            <div class={[
+              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "bg-green-500/10 border border-green-500",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7) && "bg-transparent"
+            ]}></div>
+          </div>
+          <div class="flex-1 relative z-10 -ml-[1px]">
+            <span class={[
+              "block py-1 px-2 z-10 relative",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "text-foreground",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5) && "text-muted-foreground"
+            ]}>
+              Line 3: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2)) || 0 %>/5
+            </span>
+            <div class={[
+              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out rounded-r-md",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "bg-green-500/10 border border-green-500",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5) && "bg-transparent"
+            ]}></div>
+          </div>
+        </div>
+        
+        <%= if !@debug_info.is_valid && @form[:content].value && @form[:content].value != "" do %>
+          <p class="text-sm mt-2 text-yellow-500">
+            Please enter a <a href="https://en.wikipedia.org/wiki/Haiku_in_English#Syllables" target="_blank" class="underline hover:text-yellow-400">valid haiku</a> (5-7-5 syllables)
+          </p>
         <% end %>
-        
-        <div class="mt-1 flex justify-between text-xs text-gray-500">
-          <span class={[
-            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "text-green-500 font-semibold",
-            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) > 0 && Enum.at(@debug_info.syllable_counts, 0) != 5 && "text-amber-500"
-          ]}>
-            Line 1: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0)) || 0 %>/5 syllables
-          </span>
-          <span class={[
-            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "text-green-500 font-semibold",
-            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) > 0 && Enum.at(@debug_info.syllable_counts, 1) != 7 && "text-amber-500"
-          ]}>
-            Line 2: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1)) || 0 %>/7 syllables
-          </span>
-          <span class={[
-            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "text-green-500 font-semibold",
-            @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) > 0 && Enum.at(@debug_info.syllable_counts, 2) != 5 && "text-amber-500"
-          ]}>
-            Line 3: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2)) || 0 %>/5 syllables
-          </span>
-        </div>
-        
-        <p class={if @debug_info.is_valid, do: "text-sm mt-2 text-green-500 font-medium", else: "text-sm mt-2 text-amber-500"}>
-          <%= @form.data.feedback || "" %>
-        </p>
-        
-        <!-- Debug Information -->
-        <div class="mt-4 p-3 bg-gray-100 rounded-md text-xs">
-          <p><strong>Debug Info:</strong></p>
-          <p>Is Valid Haiku: <%= inspect(@form.data.is_valid_haiku) %></p>
-          <p>Syllable Counts: <%= inspect(@form.data.syllable_counts) %></p>
-          <p>Form Errors: <%= inspect(@form.errors) %></p>
-          <p>Validation Count: <%= @debug_info.validation_count %></p>
-          <p>Last Validation: <%= @debug_info.last_validation && DateTime.to_string(@debug_info.last_validation) %></p>
-        </div>
-        
-        <div class="mt-2 h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-          <div class={[
-            "h-full transition-all duration-300",
-            @form.data.is_valid_haiku && "bg-green-500",
-            !@form.data.is_valid_haiku && "bg-amber-500"
-          ]} style={"width: #{(@form.data.syllable_counts && (Enum.sum(@form.data.syllable_counts) / 17.0 * 100)) || 0}%"}></div>
-        </div>
       </div>
       
-      <.input field={@form[:status]} type="select" options={[{"Open", "open"}, {"Doing", "doing"}, {"Done", "done"}, {"Blocked", "blocked"}]} label="Status" />
-      <.input field={@form[:is_completed]} type="checkbox" label="Completed" />
+      <.input field={@form[:status]} type="select" options={[{"Seed 🌱", "open"}, {"Tend 🧹", "doing"}, {"Fruit 🍎", "done"}, {"Withheld 🍂", "blocked"}]} label="Status" class="bg-muted/80 text-foreground border border-border rounded-md" />
 
       <:actions>
-        <!-- Debug for button conditions -->
-        <div class="mb-2 p-2 bg-gray-100 rounded-md text-xs">
-          <p>Title empty: <%= @form[:title].value == "" %></p>
-          <p>Is valid haiku: <%= @debug_info.is_valid %></p>
-          <p>Button should be disabled: <%= !@debug_info.is_valid || @form[:title].value == "" %></p>
+        <!-- Simple debug info box -->
+        <div class="mb-2 p-2 bg-muted/70 rounded text-xs text-muted-foreground">
+          <p>Haiku valid: <%= @debug_info.is_valid %> | Line syllables: <%= inspect(@debug_info.syllable_counts || [0,0,0]) %></p>
         </div>
         
         <.button 
           type="submit" 
-          class={if !@debug_info.is_valid || @form[:title].value == "", do: "w-full opacity-50 cursor-not-allowed", else: "w-full"}
-          phx-disable-with="Saving..." 
+          class={if !@debug_info.is_valid || @form[:title].value == "", do: "w-full opacity-50 cursor-not-allowed rounded-md", else: "w-full rounded-md bg-green-500 text-white hover:bg-green-600 transition"}
+          phx-disable-with="Sending..." 
           disabled={!@debug_info.is_valid || @form[:title].value == ""}>
-          <%= if @debug_info.is_valid && @form[:title].value != "", do: "Save Task", else: "Complete form to save" %>
+          <%= if @debug_info.is_valid && @form[:title].value != "", do: "Send 🫴", else: "Complete haiku" %>
         </.button>
       </:actions>
     </.simple_form>

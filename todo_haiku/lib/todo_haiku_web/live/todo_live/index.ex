@@ -13,6 +13,7 @@ defmodule TodoHaikuWeb.TodoLive.Index do
      socket
      |> assign(:tasks, tasks)
      |> assign(:filter, "all")
+     |> assign(:search_term, nil)
      |> assign(:template_task, %Task{})
      |> assign(:changeset, Todos.change_task(%Task{}))
      |> assign(:form, nil)
@@ -23,7 +24,7 @@ defmodule TodoHaikuWeb.TodoLive.Index do
          is_valid: false,
          syllable_counts: [0, 0, 0]
        })
-     |> assign(:page_title, "Todo Haikus")}
+     |> assign(:page_title, "TodoHaiku")}
   end
 
   @impl true
@@ -33,7 +34,7 @@ defmodule TodoHaikuWeb.TodoLive.Index do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Todo Haikus")
+    |> assign(:page_title, "TodoHaiku")
     |> assign(:task, nil)
     |> assign(:form, to_form(Todos.change_task(%Task{})))
   end
@@ -85,6 +86,19 @@ defmodule TodoHaikuWeb.TodoLive.Index do
   end
 
   @impl true
+  def handle_event("search", %{"value" => search_term}, socket) do
+    # Update the search term in the socket assigns
+    {:noreply, assign(socket, :search_term, search_term)}
+  end
+
+  # When no value key is found, this might be coming directly from the input
+  @impl true
+  def handle_event("search", params, socket) do
+    search_term = Map.get(params, "search", "")
+    {:noreply, assign(socket, :search_term, search_term)}
+  end
+
+  @impl true
   def handle_event("filter", %{"filter" => filter}, socket) do
     tasks = case filter do
       "all" -> Todos.list_tasks()
@@ -111,20 +125,20 @@ defmodule TodoHaikuWeb.TodoLive.Index do
     {:noreply, assign(socket, :tasks, tasks)}
   end
 
-  @impl true
-  def handle_event("toggle", %{"id" => id}, socket) do
-    task = Todos.get_task!(id)
-    {:ok, _updated_task} = Todos.update_task(task, %{is_completed: !task.is_completed})
-
-    tasks = case socket.assigns.filter do
-      "all" -> Todos.list_tasks()
-      "active" -> Todos.list_tasks() |> Enum.filter(fn t -> !t.is_completed end)
-      "completed" -> Todos.list_tasks() |> Enum.filter(fn t -> t.is_completed end)
-      _ -> Todos.list_tasks()
-    end
-
-    {:noreply, assign(socket, :tasks, tasks)}
-  end
+  # @impl true
+  # def handle_event("toggle", %{"id" => id}, socket) do
+  #   task = Todos.get_task!(id)
+  #   {:ok, _updated_task} = Todos.update_task(task, %{is_completed: !task.is_completed})
+  #
+  #   tasks = case socket.assigns.filter do
+  #     "all" -> Todos.list_tasks()
+  #     "active" -> Todos.list_tasks() |> Enum.filter(fn t -> !t.is_completed end)
+  #     "completed" -> Todos.list_tasks() |> Enum.filter(fn t -> t.is_completed end)
+  #     _ -> Todos.list_tasks()
+  #   end
+  #
+  #   {:noreply, assign(socket, :tasks, tasks)}
+  # end
 
   @impl true
   def handle_event("validate", %{"task" => task_params}, socket) do
@@ -191,7 +205,8 @@ defmodule TodoHaikuWeb.TodoLive.Index do
 
     # Use the cached validation state from debug_info
     is_valid = socket.assigns.debug_info.is_valid
-    syllable_counts = socket.assigns.debug_info.syllable_counts
+    # Don't use syllable_counts in this function, prefix with underscore to ignore
+    _syllable_counts = socket.assigns.debug_info.syllable_counts
 
     # Log validation status for save
     IO.puts("Is valid for save: #{inspect(is_valid)}")
@@ -215,17 +230,36 @@ defmodule TodoHaikuWeb.TodoLive.Index do
 
   @impl true
   def handle_event("generate_template", _, socket) do
-    template = HaikuValidator.generate_template()
+    # Generate a template haiku and title
+    examples = [
+      {"Do Laundry",
+       "High piles of laundry\nGetting so tired of this\nWhen will it all end?"},
+
+      {"Morning Exercise",
+       "Early morning run\nFeet pounding on the pavement\nStrength builds with each step"},
+
+      {"Study Session",
+       "Books spread on the desk\nKnowledge flows through fingertips\nMind grows like a tree"},
+
+      {"Self Care Evening",
+       "Candles flicker soft\nRelaxation washes through\nTime just for myself"},
+
+      {"Grocery Shopping",
+       "Empty pantry calls\nWheels squeak along tile floors\nFridge now overflows"}
+    ]
+
+    # Pick a random example
+    {title, content} = Enum.random(examples)
 
     # Update the form with the template
-    task_params = %{"content" => template}
+    task_params = %{"title" => title, "content" => content}
     changeset =
       socket.assigns.task
       |> Todos.change_task(task_params)
       |> Map.put(:action, :validate)
 
     # Validate the haiku
-    {is_valid, syllable_counts, feedback} = HaikuValidator.validate_haiku(template)
+    {is_valid, syllable_counts, feedback} = HaikuValidator.validate_haiku(content)
 
     changeset =
       changeset
@@ -233,7 +267,48 @@ defmodule TodoHaikuWeb.TodoLive.Index do
       |> Ecto.Changeset.put_change(:syllable_counts, syllable_counts)
       |> Ecto.Changeset.put_change(:feedback, feedback)
 
-    {:noreply, assign(socket, :form, to_form(changeset))}
+    # Update the debug info
+    debug_info = %{
+      last_validation: DateTime.utc_now(),
+      validation_count: socket.assigns.debug_info.validation_count + 1,
+      is_valid: is_valid,
+      syllable_counts: syllable_counts
+    }
+
+    {:noreply,
+      socket
+      |> assign(:form, to_form(changeset))
+      |> assign(:debug_info, debug_info)
+    }
+  end
+
+  @impl true
+  def handle_event("task-moved", %{"id" => id, "status" => new_status, "position" => position}, socket) do
+    # Log the task move
+    IO.puts("Task #{id} moved to #{new_status} at position #{position}")
+
+    # Get the task
+    task = Todos.get_task!(id)
+
+    # Reposition the task
+    case Todos.reposition_task(task, new_status, position) do
+      {:ok, _} ->
+        IO.puts("Task repositioned successfully: #{id}")
+
+        # Refresh the task list
+        tasks = case socket.assigns.filter do
+          "all" -> Todos.list_tasks()
+          "active" -> Todos.list_tasks() |> Enum.filter(fn t -> !t.is_completed end)
+          "completed" -> Todos.list_tasks() |> Enum.filter(fn t -> t.is_completed end)
+          _ -> Todos.list_tasks()
+        end
+
+        {:noreply, assign(socket, :tasks, tasks)}
+
+      {:error, reason} ->
+        IO.puts("Error repositioning task: #{inspect(reason)}")
+        {:noreply, socket}
+    end
   end
 
   defp save_task(socket, :edit, task_params) do
@@ -260,9 +335,5 @@ defmodule TodoHaikuWeb.TodoLive.Index do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
     end
-  end
-
-  defp get_field_from_changeset(changeset, field) do
-    Ecto.Changeset.get_field(changeset, field)
   end
 end

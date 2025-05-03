@@ -8,7 +8,7 @@ defmodule TodoHaikuWeb.TodoLive do
   @impl true
   def mount(_params, _session, socket) do
     tasks = Todos.list_tasks()
-    
+
     {:ok,
      socket
      |> assign(:tasks, tasks)
@@ -16,7 +16,7 @@ defmodule TodoHaikuWeb.TodoLive do
      |> assign(:template_task, %Task{})
      |> assign(:changeset, Todos.change_task(%Task{}))
      |> assign(:form, nil)
-     |> assign(:page_title, "Todo Haikus")}
+     |> assign(:page_title, "TodoHaiku")}
   end
 
   @impl true
@@ -26,7 +26,7 @@ defmodule TodoHaikuWeb.TodoLive do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Todo Haikus")
+    |> assign(:page_title, "TodoHaiku")
     |> assign(:task, nil)
     |> assign(:form, to_form(Todos.change_task(%Task{})))
   end
@@ -76,7 +76,7 @@ defmodule TodoHaikuWeb.TodoLive do
   @impl true
   def handle_event("toggle", %{"id" => id}, socket) do
     task = Todos.get_task!(id)
-    {:ok, updated_task} = Todos.update_task(task, %{is_completed: !task.is_completed})
+    {:ok, _updated_task} = Todos.update_task(task, %{is_completed: !task.is_completed})
 
     tasks = case socket.assigns.filter do
       "all" -> Todos.list_tasks()
@@ -97,15 +97,15 @@ defmodule TodoHaikuWeb.TodoLive do
 
     # Get virtual fields for feedback
     content = get_field_from_changeset(changeset, :content)
-    {is_valid, syllable_counts, feedback} = 
+    {is_valid, syllable_counts, feedback} =
       if is_nil(content) do
         {false, [0, 0, 0], ""}
       else
         TodoHaiku.HaikuValidator.validate_haiku(content)
       end
 
-    changeset = 
-      changeset 
+    changeset =
+      changeset
       |> Ecto.Changeset.put_change(:is_valid_haiku, is_valid)
       |> Ecto.Changeset.put_change(:syllable_counts, syllable_counts)
       |> Ecto.Changeset.put_change(:feedback, feedback)
@@ -121,7 +121,7 @@ defmodule TodoHaikuWeb.TodoLive do
   @impl true
   def handle_event("generate_template", _, socket) do
     template = HaikuValidator.generate_template()
-    
+
     # Update the form with the template
     task_params = %{"content" => template}
     changeset =
@@ -132,8 +132,8 @@ defmodule TodoHaikuWeb.TodoLive do
     # Validate the haiku
     {is_valid, syllable_counts, feedback} = HaikuValidator.validate_haiku(template)
 
-    changeset = 
-      changeset 
+    changeset =
+      changeset
       |> Ecto.Changeset.put_change(:is_valid_haiku, is_valid)
       |> Ecto.Changeset.put_change(:syllable_counts, syllable_counts)
       |> Ecto.Changeset.put_change(:feedback, feedback)
@@ -170,4 +170,4 @@ defmodule TodoHaikuWeb.TodoLive do
   defp get_field_from_changeset(changeset, field) do
     Ecto.Changeset.get_field(changeset, field)
   end
-end 
+end
