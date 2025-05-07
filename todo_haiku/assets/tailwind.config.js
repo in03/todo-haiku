@@ -31,6 +31,14 @@ module.exports = {
           DEFAULT: "#ff6b6b", // Soft red
           foreground: "#FFFFFF",
         },
+        // Neon colors
+        neon: {
+          blue: "#3b82f6",
+          green: "#22c55e",
+          yellow: "#eab308",
+          red: "#ef4444",
+          purple: "#9d8cff",
+        },
       },
       fontFamily: {
         serif: ['Noto Serif', 'serif'],
@@ -38,6 +46,9 @@ module.exports = {
       boxShadow: {
         task: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
         'task-hover': '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)',
+        'neon-sm': '0 0 5px var(--tw-shadow-color, rgba(157, 140, 255, 0.7))',
+        'neon-md': '0 0 10px var(--tw-shadow-color, rgba(157, 140, 255, 0.7))',
+        'neon-lg': '0 0 15px var(--tw-shadow-color, rgba(157, 140, 255, 0.7))',
       },
       minHeight: {
         'kanban-column': '500px', // Increase the minimum height for kanban columns
@@ -45,59 +56,19 @@ module.exports = {
       width: {
         'kanban-board': '100%', // Full width for the kanban board
       },
+      animation: {
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'glow': 'glow 2s ease-in-out infinite alternate',
+      },
+      keyframes: {
+        glow: {
+          '0%': { boxShadow: '0 0 5px rgba(157, 140, 255, 0.7)' },
+          '100%': { boxShadow: '0 0 15px rgba(157, 140, 255, 0.7)' },
+        },
+      },
     },
   },
   plugins: [
-    require("@tailwindcss/forms"),
-    // Allows prefixing tailwind classes with LiveView classes to add rules
-    // only when LiveView classes are applied, for example:
-    //
-    //     <div class="phx-click-loading:animate-ping">
-    //
-    plugin(({addVariant}) => addVariant("phx-click-loading", [".phx-click-loading&", ".phx-click-loading &"])),
-    plugin(({addVariant}) => addVariant("phx-submit-loading", [".phx-submit-loading&", ".phx-submit-loading &"])),
-    plugin(({addVariant}) => addVariant("phx-change-loading", [".phx-change-loading&", ".phx-change-loading &"])),
-
-    // Embeds Heroicons (https://heroicons.com) into your app.css bundle
-    // See your `CoreComponents.icon/1` for more information.
-    //
-    plugin(function({matchComponents, theme}) {
-      let iconsDir = path.join(__dirname, "../deps/heroicons/optimized")
-      let values = {}
-      let icons = [
-        ["", "/24/outline"],
-        ["-solid", "/24/solid"],
-        ["-mini", "/20/solid"],
-        ["-micro", "/16/solid"]
-      ]
-      icons.forEach(([suffix, dir]) => {
-        fs.readdirSync(path.join(iconsDir, dir)).forEach(file => {
-          let name = path.basename(file, ".svg") + suffix
-          values[name] = {name, fullPath: path.join(iconsDir, dir, file)}
-        })
-      })
-      matchComponents({
-        "hero": ({name, fullPath}) => {
-          let content = fs.readFileSync(fullPath).toString().replace(/\r?\n|\r/g, "")
-          let size = theme("spacing.6")
-          if (name.endsWith("-mini")) {
-            size = theme("spacing.5")
-          } else if (name.endsWith("-micro")) {
-            size = theme("spacing.4")
-          }
-          return {
-            [`--hero-${name}`]: `url('data:image/svg+xml;utf8,${content}')`,
-            "-webkit-mask": `var(--hero-${name})`,
-            "mask": `var(--hero-${name})`,
-            "mask-repeat": "no-repeat",
-            "background-color": "currentColor",
-            "vertical-align": "middle",
-            "display": "inline-block",
-            "width": size,
-            "height": size
-          }
-        }
-      }, {values})
-    })
+    require("@tailwindcss/forms")
   ]
 }

@@ -19,7 +19,7 @@ defmodule TodoHaiku.MixProject do
   def application do
     [
       mod: {TodoHaiku.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :ueberauth, :ueberauth_github]
     ]
   end
 
@@ -32,6 +32,7 @@ defmodule TodoHaiku.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:pbkdf2_elixir, "~> 2.0"},
       {:phoenix, "~> 1.7.21"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
@@ -57,7 +58,9 @@ defmodule TodoHaiku.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:ueberauth, "~> 0.10.5"},
+      {:ueberauth_github, "~> 0.8.1"},
     ]
   end
 

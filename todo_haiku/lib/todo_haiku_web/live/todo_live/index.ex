@@ -39,12 +39,16 @@ defmodule TodoHaikuWeb.TodoLive.Index do
     |> assign(:form, to_form(Todos.change_task(%Task{})))
   end
 
-  defp apply_action(socket, :new, _params) do
+  defp apply_action(socket, :new, params) do
+    # Get status from query params, default to "open" if missing
+    status = Map.get(params, "status", "open")
+
     # Initialize with empty template for better UX
     task = %Task{
       is_valid_haiku: false,
       syllable_counts: [0, 0, 0],
-      feedback: "Enter your haiku"
+      feedback: "Enter your haiku",
+      status: status # Pre-fill status
     }
 
     changeset = Todos.change_task(task)

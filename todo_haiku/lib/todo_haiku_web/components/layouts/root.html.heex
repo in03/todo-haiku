@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="[scrollbar-gutter:stable]">
+<html lang="en" style="height: 100%; overflow: hidden;">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,15 +8,86 @@
       {assigns[:page_title]}
     </.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
+
+    <!-- Prevent Alpine.js auto initialization -->
+    <script>
+      window._x_alpineInitManual = true;
+      // Additional check to ensure Alpine doesn't initialize twice
+      window.Alpine = window.Alpine || {};
+      window.Alpine.initialized = false;
+    </script>
+    
     <!-- Add Sortable.js from CDN -->
     <script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <!-- Add Alpine.js from CDN -->
+    
+    <!-- Add Alpine.js from CDN with manual initialization -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.7/dist/cdn.min.js"></script>
+    
     <!-- Load our app.js last -->
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
+    <style>
+      /* Force no scrollbars on the login page */
+      body:not(:has(header)) {
+        overflow: hidden;
+      }
+    </style>
   </head>
-  <body class="bg-background text-foreground min-h-screen">
-    {@inner_content}
+  <body style="height: 100%; margin: 0; padding: 0; box-sizing: border-box;" class="bg-gray-900 text-gray-200">
+    <%= if @current_user do %>
+      <header class="bg-gray-800 shadow-md">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="flex h-16 items-center justify-between">
+            <div class="flex items-center">
+              <a href={~p"/tasks"} class="text-xl font-bold text-green-400">
+                <span class="text-green-500">Todo</span> Haiku <span class="inline-block">🍃</span>
+              </a>
+            </div>
+
+            <!-- Search Bar Moved Here -->
+            <div class="flex-1 flex justify-center px-12">
+              <div class="relative w-full max-w-xs">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input 
+                  id="global-search-input" 
+                  type="text" 
+                  placeholder="Search tasks..." 
+                  class="block w-full rounded-lg border-0 bg-gray-700 py-1.5 pl-10 pr-3 text-gray-200 ring-1 ring-inset ring-gray-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-[var(--app-green-primary)] sm:text-sm sm:leading-6 transition-colors duration-150"
+                  phx-keyup="search" 
+                  phx-debounce="300" 
+                  name="search"
+                />
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <kbd class="inline-flex items-center rounded border border-gray-500 px-1.5 font-sans text-xs text-gray-400">
+                    ⌘K / Ctrl+K
+                  </kbd>
+                </div>
+              </div>
+            </div>
+            <!-- End Search Bar -->
+
+            <div class="flex items-center gap-2">
+              <%= if @current_user.avatar_url do %>
+                <img src={@current_user.avatar_url} alt="Profile" class="h-8 w-8 rounded-full" />
+              <% end %>
+              <span class="text-sm font-medium text-gray-300 mr-2">
+                <%= @current_user.name || @current_user.email %>
+              </span>
+              <a href={~p"/auth/logout"} class="rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-600 transition duration-200" data-method="delete">
+                Sign out
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+    <% end %>
+
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      {@inner_content}
+    </main>
   </body>
 </html>

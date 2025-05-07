@@ -55,3 +55,6 @@ npm-debug.log
 .DS_Store
 Thumbs.db
 
+# Secret configuration files
+/config/*.secret.exs
+

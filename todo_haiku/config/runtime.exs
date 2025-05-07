@@ -20,13 +20,18 @@ if System.get_env("PHX_SERVER") do
   config :todo_haiku, TodoHaikuWeb.Endpoint, server: true
 end
 
+# For production environment, we load GitHub OAuth from environment variables.
+# In development, we'll use config/dev.secret.exs instead
 if config_env() == :prod do
+  # Configure GitHub OAuth for production
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: System.get_env("GITHUB_CLIENT_ID"),
+    client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+
+  # For Fly.io, we'll use a persistent volume mount
   database_path =
     System.get_env("DATABASE_PATH") ||
-      raise """
-      environment variable DATABASE_PATH is missing.
-      For example: /path/to/todo_haiku_prod.db
-      """
+      "/data/todo_haiku_prod.db"
 
   config :todo_haiku, TodoHaiku.Repo,
     database: database_path,

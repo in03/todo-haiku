@@ -7,9 +7,10 @@
 # General application configuration
 import Config
 
+# Configure Mix tasks and generators
 config :todo_haiku,
-  ecto_repos: [TodoHaiku.Repo],
-  generators: [timestamp_type: :utc_datetime, binary_id: true]
+  namespace: TodoHaiku,
+  ecto_repos: [TodoHaiku.Repo]
 
 # Configures the endpoint
 config :todo_haiku, TodoHaikuWeb.Endpoint,
@@ -20,7 +21,7 @@ config :todo_haiku, TodoHaikuWeb.Endpoint,
     layout: false
   ],
   pubsub_server: TodoHaiku.PubSub,
-  live_view: [signing_salt: "Ijulp850"]
+  live_view: [signing_salt: "xQPY7Y8I"]
 
 # Configures the mailer
 #
@@ -43,7 +44,7 @@ config :esbuild,
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "3.4.3",
+  version: "3.4.0",
   todo_haiku: [
     args: ~w(
       --config=tailwind.config.js
@@ -60,6 +61,17 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Ueberauth configuration
+config :ueberauth, Ueberauth,
+  providers: [
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
+  ]
+
+# Ueberauth Github provider configuration
+config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+  client_id: System.get_env("GITHUB_CLIENT_ID"),
+  client_secret: System.get_env("GITHUB_CLIENT_SECRET")
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

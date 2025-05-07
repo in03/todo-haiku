@@ -1,0 +1,44 @@
+# This file excludes paths from the Docker build context.
+#
+# By default, Docker's build context includes all files (and folders) in the
+# current directory. Even if a file isn't copied into the container it is still
+# sent to the Docker daemon.
+#
+# There are multiple reasons to exclude files from the build context:
+#
+# 1. Prevent large files from being sent to the Docker daemon.
+#
+# 2. Prevent secret files from being sent to the Docker daemon and potentially
+#    included in the image.
+#
+# 3. Exclude files that are not necessary for building the image to ensure the
+#    smallest possible build context.
+#
+# 4. Exclude files that change frequently but do not affect the build to ensure
+#    efficient use of the Docker layer cache.
+#
+# More information on this topic:
+# https://docs.docker.com/build/building/context/
+
+# Development artifacts
+.git
+.log
+.gitignore
+.elixir_ls
+.history
+.vscode
+
+# Mix artifacts
+_build
+deps
+tmp
+.fetch
+todo_haiku_dev.db
+todo_haiku_dev.db-*
+*.ez
+test
+
+# Local environment variable files
+.env
+.env.*
+!.env.example

@@ -7,16 +7,24 @@ defmodule TodoHaikuWeb.TodoLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    tasks = Todos.list_tasks()
+    # Verify the user is authenticated
+    if socket.assigns[:current_user] do
+      tasks = Todos.list_tasks()
 
-    {:ok,
-     socket
-     |> assign(:tasks, tasks)
-     |> assign(:filter, "all")
-     |> assign(:template_task, %Task{})
-     |> assign(:changeset, Todos.change_task(%Task{}))
-     |> assign(:form, nil)
-     |> assign(:page_title, "TodoHaiku")}
+      {:ok,
+       socket
+       |> assign(:tasks, tasks)
+       |> assign(:filter, "all")
+       |> assign(:template_task, %Task{})
+       |> assign(:changeset, Todos.change_task(%Task{}))
+       |> assign(:form, nil)
+       |> assign(:page_title, "TodoHaiku")}
+    else
+      {:ok,
+       socket
+       |> put_flash(:error, "You must be logged in to access tasks.")
+       |> redirect(to: ~p"/")}
+    end
   end
 
   @impl true
