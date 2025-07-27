@@ -61,6 +61,9 @@ defmodule TodoHaiku.MixProject do
       {:bandit, "~> 1.5"},
       {:ueberauth, "~> 0.10.5"},
       {:ueberauth_github, "~> 0.8.1"},
+
+      {:req, "~> 0.5.10"},
+      {:briefly, "~> 0.4"}
     ]
   end
 

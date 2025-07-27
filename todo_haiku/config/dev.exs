@@ -81,6 +81,9 @@ config :phoenix_live_view,
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
 
+# Big Phoney microservice configuration for development
+config :todo_haiku, :big_phoney_endpoint, "http://localhost:8000"
+
 # Import the secret configuration file if it exists
 if File.exists?("config/dev.secret.exs") do
   import_config "dev.secret.exs"

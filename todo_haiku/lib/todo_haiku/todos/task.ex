@@ -42,11 +42,9 @@ defmodule TodoHaiku.Todos.Task do
     IO.puts("Task changeset called with attrs: #{inspect(attrs)}")
 
     task
-    |> cast(attrs, [:title, :content, :status, :position])
+    |> cast(attrs, [:title, :content, :status, :position, :syllable_counts, :is_valid_haiku, :feedback])
     |> validate_required([:title, :content])
     |> validate_status()
-    |> validate_haiku()
-    |> validate_haiku_is_valid()
   end
 
   defp validate_status(changeset) do
@@ -60,33 +58,5 @@ defmodule TodoHaiku.Todos.Task do
     end
   end
 
-  defp validate_haiku(changeset) do
-    content = get_field(changeset, :content)
-    IO.puts("Validating haiku content: #{inspect(content)}")
 
-    if is_nil(content) do
-      changeset
-    else
-      {is_valid, syllable_counts, feedback} = TodoHaiku.HaikuValidator.validate_haiku(content)
-      IO.puts("Schema validation result: is_valid=#{inspect(is_valid)}, syllable_counts=#{inspect(syllable_counts)}")
-
-      changeset
-      |> put_change(:syllable_counts, syllable_counts)
-      |> put_change(:is_valid_haiku, is_valid)
-      |> put_change(:feedback, feedback)
-    end
-  end
-
-  defp validate_haiku_is_valid(changeset) do
-    # Get the validation status
-    is_valid_haiku = get_field(changeset, :is_valid_haiku)
-    IO.puts("validate_haiku_is_valid called, is_valid_haiku=#{inspect(is_valid_haiku)}")
-
-    if is_valid_haiku == false do
-      IO.puts("Adding error: haiku is not valid")
-      add_error(changeset, :content, "must be a valid haiku with 5-7-5 syllable pattern")
-    else
-      changeset
-    end
-  end
 end
