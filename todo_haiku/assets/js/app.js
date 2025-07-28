@@ -40,7 +40,8 @@ Hooks.KanbanBoard = {
     }
     
     // Initialize Sortable for each column in the board
-    const columns = board.querySelectorAll(".kanban-column-content");
+    // Update column references to work with both old and new class structures
+    const columns = board.querySelectorAll(".kanban-column-content, [data-column]");
     
     columns.forEach(column => {
       new Sortable(column, {
@@ -49,24 +50,18 @@ Hooks.KanbanBoard = {
         ghostClass: 'task-ghost',
         chosenClass: 'task-chosen',
         dragClass: 'task-drag',
-        handle: '.task-card', // Use task card as handle
-        draggable: '.task-card', // Only allow task cards to be dragged
-        filter: '.column-guide, .text-center', // Don't allow column guides to be dragged
-        forceFallback: true, // Force fallback for better animation
+        handle: '.task-card', 
+        draggable: '.task-card', 
+        filter: '.column-guide, .text-center, .empty-column-message', 
+        forceFallback: true, 
         fallbackClass: 'sortable-fallback',
-        scroll: true, // Enable scrolling in columns
+        scroll: true, 
         scrollSensitivity: 80,
         scrollSpeed: 20,
         
         // When drag starts
         onStart: (evt) => {
           document.body.classList.add('dragging-active');
-          // Make all guides visible during dragging
-          document.querySelectorAll('.column-guide').forEach(guide => {
-            guide.style.opacity = '0.5';
-            guide.style.height = '8px';
-            guide.style.margin = '8px 0';
-          });
           
           // Highlight destination columns
           document.querySelectorAll('.kanban-column').forEach(col => {
@@ -79,19 +74,10 @@ Hooks.KanbanBoard = {
         // When drag ends
         onEnd: (evt) => {
           document.body.classList.remove('dragging-active');
-          // Get the task id and new status
+          
           const taskId = evt.item.getAttribute('data-task-id');
-          const newStatus = evt.to.getAttribute('data-column');
-          
-          // Calculate the new position in the column
+          const newStatus = evt.to.getAttribute('data-column') || evt.to.closest('[data-status]')?.getAttribute('data-status');
           const newIndex = evt.newIndex;
-          
-          // Hide guides when dragging is done
-          document.querySelectorAll('.column-guide').forEach(guide => {
-            guide.style.opacity = '0';
-            guide.style.height = '2px';
-            guide.style.margin = '5px 0';
-          });
           
           // Remove highlight from destination columns
           document.querySelectorAll('.kanban-column').forEach(col => {
@@ -99,18 +85,20 @@ Hooks.KanbanBoard = {
           });
           
           // Send the update to the server
-          this.pushEvent("task-moved", {
-            id: taskId,
-            status: newStatus,
-            position: newIndex
-          });
+          if (taskId && newStatus) {
+            this.pushEvent("task-moved", {
+              id: taskId,
+              status: newStatus,
+              position: newIndex
+            });
+          }
           
-          // Update the task card color to match the new column
+          // Update visual effects
           setTimeout(() => {
             this.updateTaskCardColors();
             this.updateColumnGlowIntensity();
-            this.addFloatingEffect(); // Refresh floating effects
-          }, 300); // Short delay to allow DOM updates
+            this.addFloatingEffect();
+          }, 300);
         }
       });
     });

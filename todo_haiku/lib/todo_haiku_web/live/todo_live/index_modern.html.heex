@@ -1,18 +1,18 @@
 <div class="mx-auto px-4 py-6 w-full">
   <%= if Enum.empty?(@tasks) do %>
-    <TodoHaikuWeb.TaskComponents.empty_state />
+    <TaskComponents.empty_state />
   <% else %>
-    <TodoHaikuWeb.KanbanComponents.kanban_board tasks={@tasks} search_term={@search_term}>
+    <KanbanComponents.kanban_board tasks={@tasks} search_term={@search_term}>
       <:column status="open" title="Seed" icon="🌱" color="blue" />
       <:column status="doing" title="Tend" icon="🧹" color="yellow" />
       <:column status="done" title="Fruit" icon="🍎" color="green" />
       <:column status="blocked" title="Withheld" icon="🍂" color="red" />
-    </TodoHaikuWeb.KanbanComponents.kanban_board>
+    </KanbanComponents.kanban_board>
   <% end %>
 </div>
 
 <.modal :if={@live_action in [:new, :edit]} id="task-modal" show on_cancel={JS.patch(~p"/tasks")}>
-  <TodoHaikuWeb.TaskComponents.task_form 
+  <TaskComponents.task_form 
     form={@form}
     page_title={@page_title}
     validation_state={@validation_state}

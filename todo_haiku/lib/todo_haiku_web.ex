@@ -77,6 +77,12 @@ defmodule TodoHaikuWeb do
 
       # Include general helpers for rendering HTML
       unquote(html_helpers())
+
+      # Import our custom component libraries
+      import TodoHaikuWeb.KanbanComponents
+      # Skip DesignSystem button to avoid conflicts with CoreComponents
+      # import TodoHaikuWeb.DesignSystem
+      import TodoHaikuWeb.TaskComponents
     end
   end
 
