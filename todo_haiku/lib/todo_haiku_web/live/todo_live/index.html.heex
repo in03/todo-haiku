@@ -1,0 +1,411 @@
+<div class="mx-auto px-4 py-6 w-full">
+  <%!-- <h1 class="text-3xl font-bold mb-6 text-[var(--app-green-primary)]">Todo Haiku 🍃</h1> --%>
+
+  <div class="mb-6">
+    <div class="flex flex-col md:flex-row items-center gap-4 mb-6">
+      <%!-- Search Bar Moved to Root Layout --%>
+      <%!-- <div class="relative w-full md:w-64">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input 
+          type="text" 
+          placeholder="Search tasks..." 
+          class="task-search pl-10"
+          phx-keyup="search" 
+          phx-debounce="300" 
+          name="search"
+        />
+      </div> --%>
+      
+      <div class="ml-auto">
+        <%!-- Original New Task button removed --%>
+        <%!-- <.link patch={~p"/tasks/new"} class="bg-[var(--app-green-primary)] text-white px-4 py-2 rounded-md hover:bg-[var(--app-green-primary-hover)] transition-colors">
+          New Task
+        </.link> --%>
+      </div>
+    </div>
+
+    <%= if Enum.empty?(@tasks) do %>
+      <div class="text-center py-10 bg-card rounded-lg">
+        <p class="text-muted-foreground">No tasks found. Create a new one!</p>
+      </div>
+    <% else %>
+      <!-- Kanban Board -->
+      <div id="kanban-board" class="grid grid-cols-4 gap-6" phx-hook="KanbanBoard">
+        <!-- Open Column -->
+        <% open_tasks = Enum.filter(@tasks, fn t -> 
+                t.status == "open" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) %>
+        <% open_count = length(open_tasks) %>
+        <div class={[
+              "kanban-column",
+              open_count == 0 && "kanban-column-empty",
+              cond do
+                open_count >= 5 -> "task-count-high"
+                open_count >= 3 -> "task-count-medium"
+                open_count > 0 -> "task-count-low"
+                true -> ""
+              end
+            ]} 
+             data-status="open">
+          <div class="kanban-column-header">
+            <div class="header-glow"></div>
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🌱</span>
+              Seed
+              <.link patch={~p"/tasks/new?status=open"} id="new-task-in-open" class="column-action-button">
+                <div class="action-button-content">
+                  <div class="counter-view">
+                    <span class="task-counter-number"><%= open_count %></span>
+                  </div>
+                  <div class="plus-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </div>
+                </div>
+              </.link>
+            </h3>
+          </div>
+          <div class="kanban-column-content" data-column="open">
+            <%= for task <- open_tasks do %>
+              <div class="task-card cursor-move" data-task-id={task.id} data-status="open">
+                <div class="flex justify-between items-start">
+                  <div class="flex items-center">
+                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
+                      <span class="task-dot" data-status={task.status}></span>
+                    </.link>
+                    <h4 class="text-sm font-medium text-foreground">
+                      <%= task.title %>
+                    </h4>
+                  </div>
+                  <div class="flex space-x-1 items-center">
+                    <%!-- Original edit link removed --%>
+                  </div>
+                </div>
+                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
+                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
+                </div>
+              </div>
+            <% end %>
+            <%= if open_count == 0 do %>
+              <div class="text-center py-6 text-sm text-muted-foreground italic">
+                Drag tasks here...
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Doing Column -->
+        <% doing_tasks = Enum.filter(@tasks, fn t -> 
+                t.status == "doing" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) %>
+        <% doing_count = length(doing_tasks) %>
+        <div class={[
+              "kanban-column",
+              doing_count == 0 && "kanban-column-empty",
+              cond do
+                doing_count >= 5 -> "task-count-high"
+                doing_count >= 3 -> "task-count-medium"
+                doing_count > 0 -> "task-count-low"
+                true -> ""
+              end
+            ]} 
+             data-status="doing">
+          <div class="kanban-column-header">
+            <div class="header-glow"></div>
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🧹</span>
+              Tend
+              <.link patch={~p"/tasks/new?status=doing"} id="new-task-in-doing" class="column-action-button">
+                <div class="action-button-content">
+                  <div class="counter-view">
+                    <span class="task-counter-number"><%= doing_count %></span>
+                  </div>
+                  <div class="plus-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </div>
+                </div>
+              </.link>
+            </h3>
+          </div>
+          <div class="kanban-column-content" data-column="doing">
+            <%= for task <- doing_tasks do %>
+              <div class="task-card cursor-move" data-task-id={task.id} data-status="doing">
+                <div class="flex justify-between items-start">
+                  <div class="flex items-center">
+                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
+                      <span class="task-dot" data-status={task.status}></span>
+                    </.link>
+                    <h4 class="text-sm font-medium text-foreground">
+                      <%= task.title %>
+                    </h4>
+                  </div>
+                  <div class="flex space-x-1 items-center">
+                    <%!-- Original edit link removed --%>
+                  </div>
+                </div>
+                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
+                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
+                </div>
+              </div>
+            <% end %>
+            <%= if doing_count == 0 do %>
+              <div class="text-center py-6 text-sm text-muted-foreground italic">
+                Drag tasks here...
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Done Column -->
+        <% done_tasks = Enum.filter(@tasks, fn t -> 
+                t.status == "done" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) %>
+        <% done_count = length(done_tasks) %>
+        <div class={[
+              "kanban-column",
+              done_count == 0 && "kanban-column-empty",
+              cond do
+                done_count >= 5 -> "task-count-high"
+                done_count >= 3 -> "task-count-medium"
+                done_count > 0 -> "task-count-low"
+                true -> ""
+              end
+            ]} 
+             data-status="done">
+          <div class="kanban-column-header">
+            <div class="header-glow"></div>
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🍎</span>
+              Fruit
+              <.link patch={~p"/tasks/new?status=done"} id="new-task-in-done" class="column-action-button">
+                <div class="action-button-content">
+                  <div class="counter-view">
+                    <span class="task-counter-number"><%= done_count %></span>
+                  </div>
+                  <div class="plus-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </div>
+                </div>
+              </.link>
+            </h3>
+          </div>
+          <div class="kanban-column-content" data-column="done">
+            <%= for task <- done_tasks do %>
+              <div class="task-card cursor-move" data-task-id={task.id} data-status="done">
+                <div class="flex justify-between items-start">
+                  <div class="flex items-center">
+                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
+                      <span class="task-dot" data-status={task.status}></span>
+                    </.link>
+                    <h4 class="text-sm font-medium text-foreground">
+                      <%= task.title %>
+                    </h4>
+                  </div>
+                  <div class="flex space-x-1 items-center">
+                    <%!-- Original edit link removed --%>
+                  </div>
+                </div>
+                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
+                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
+                </div>
+              </div>
+            <% end %>
+            <%= if done_count == 0 do %>
+              <div class="text-center py-6 text-sm text-muted-foreground italic">
+                Drag tasks here...
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Blocked Column -->
+        <% blocked_tasks = Enum.filter(@tasks, fn t -> 
+                t.status == "blocked" && 
+                (is_nil(@search_term) || @search_term == "" || 
+                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
+                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
+              end) %>
+        <% blocked_count = length(blocked_tasks) %>
+        <div class={[
+              "kanban-column",
+              blocked_count == 0 && "kanban-column-empty",
+              cond do
+                blocked_count >= 5 -> "task-count-high"
+                blocked_count >= 3 -> "task-count-medium"
+                blocked_count > 0 -> "task-count-low"
+                true -> ""
+              end
+            ]} 
+             data-status="blocked">
+          <div class="kanban-column-header">
+            <div class="header-glow"></div>
+            <h3 class="font-medium text-foreground flex items-center">
+              <span class="column-icon">🍂</span>
+              Withheld
+              <.link patch={~p"/tasks/new?status=blocked"} id="new-task-in-blocked" class="column-action-button">
+                <div class="action-button-content">
+                  <div class="counter-view">
+                    <span class="task-counter-number"><%= blocked_count %></span>
+                  </div>
+                  <div class="plus-view">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </div>
+                </div>
+              </.link>
+            </h3>
+          </div>
+          <div class="kanban-column-content" data-column="blocked">
+            <%= for task <- blocked_tasks do %>
+              <div class="task-card cursor-move" data-task-id={task.id} data-status="blocked">
+                <div class="flex justify-between items-start">
+                  <div class="flex items-center">
+                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
+                      <span class="task-dot" data-status={task.status}></span>
+                    </.link>
+                    <h4 class="text-sm font-medium text-foreground">
+                      <%= task.title %>
+                    </h4>
+                  </div>
+                  <div class="flex space-x-1 items-center">
+                    <%!-- Original edit link removed --%>
+                  </div>
+                </div>
+                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
+                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
+                </div>
+              </div>
+            <% end %>
+            <%= if blocked_count == 0 do %>
+              <div class="text-center py-6 text-sm text-muted-foreground italic">
+                Drag tasks here...
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<.modal :if={@live_action in [:new, :edit]} id="task-modal" show on_cancel={JS.patch(~p"/tasks")}>
+  <div class="max-w-xl mx-auto my-12 rounded-xl shadow-2xl bg-card text-foreground p-8 border border-border">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold text-foreground mb-1"><%= @page_title %></h2>
+      <p class="text-muted-foreground text-sm">Create a new task with a haiku description</p>
+    </div>
+
+    <.simple_form
+      for={@form}
+      id="task-form"
+      phx-change="validate"
+      phx-submit="save"
+      phx-trigger-action={@trigger_submit}
+    >
+      <.input field={@form[:title]} type="text" placeholder="Task Title" class="bg-muted/80 text-foreground border border-border rounded-md focus:ring-[var(--app-green-primary)]" />
+      <%= if @form[:title].errors != [] do %>
+        <div class="mt-1 text-sm text-destructive">
+          Task title is required
+        </div>
+      <% end %>
+      
+      <div class="mb-4">
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-sm text-foreground">Wax poetic...</span>
+          <button type="button" phx-click="generate_template" class="text-xs text-[var(--app-green-primary)] hover:text-[var(--app-green-primary-hover)]">
+            ✨ Example
+          </button>
+        </div>
+        
+        <.input field={@form[:content]} type="textarea" rows="3" phx-debounce="300" placeholder="Write your haiku here..." class="font-serif resize-none bg-muted/80 text-foreground border border-border rounded-md focus:ring-[var(--app-green-primary)]" required />
+        
+        <div class="mt-3 flex justify-between text-xs text-muted-foreground">
+          <div class="flex-1 relative z-10">
+            <span class={[
+              "block py-1 px-2 z-10 relative",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "text-foreground",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5) && "text-muted-foreground"
+            ]}>
+              Line 1: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0)) || 0 %>/5
+            </span>
+            <div class={[
+              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out rounded-l-md",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "bg-[var(--app-green-primary)]/10 border border-[var(--app-green-primary)]",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5) && "bg-transparent"
+            ]}></div>
+          </div>
+          <div class="flex-1 relative z-20 -mx-[1px]">
+            <span class={[
+              "block py-1 px-2 z-10 relative",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "text-foreground",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7) && "text-muted-foreground"
+            ]}>
+              Line 2: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1)) || 0 %>/7
+            </span>
+            <div class={[
+              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "bg-[var(--app-green-primary)]/10 border border-[var(--app-green-primary)]",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7) && "bg-transparent"
+            ]}></div>
+          </div>
+          <div class="flex-1 relative z-10 -ml-[1px]">
+            <span class={[
+              "block py-1 px-2 z-10 relative",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "text-foreground",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5) && "text-muted-foreground"
+            ]}>
+              Line 3: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2)) || 0 %>/5
+            </span>
+            <div class={[
+              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out rounded-r-md",
+              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "bg-[var(--app-green-primary)]/10 border border-[var(--app-green-primary)]",
+              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5) && "bg-transparent"
+            ]}></div>
+          </div>
+        </div>
+        
+        <%= if !@debug_info.is_valid && @form[:content].value && @form[:content].value != "" do %>
+          <p class="text-sm mt-2 text-yellow-500">
+            Please enter a <a href="https://en.wikipedia.org/wiki/Haiku_in_English#Syllables" target="_blank" class="underline hover:text-yellow-400">valid haiku</a> (5-7-5 syllables)
+          </p>
+        <% end %>
+      </div>
+      
+      <.input field={@form[:status]} type="select" options={[{"Seed 🌱", "open"}, {"Tend 🧹", "doing"}, {"Fruit 🍎", "done"}, {"Withheld 🍂", "blocked"}]} label="Status" class="bg-muted/80 text-foreground border border-border rounded-md focus:ring-[var(--app-green-primary)]" />
+
+      <:actions>
+        <!-- Simple debug info box -->
+        <div class="mb-2 p-2 bg-muted/70 rounded text-xs text-muted-foreground">
+          <p>Haiku valid: <%= @debug_info.is_valid %> | Line syllables: <%= inspect(@debug_info.syllable_counts || [0,0,0]) %></p>
+        </div>
+        
+        <.button 
+          type="submit" 
+          class={if !@debug_info.is_valid || @form[:title].value == "", do: "w-full opacity-50 cursor-not-allowed rounded-md", else: "w-full rounded-md bg-[var(--app-green-primary)] text-white hover:bg-[var(--app-green-primary-hover)] transition"}
+          phx-disable-with="Sending..." 
+          disabled={!@debug_info.is_valid || @form[:title].value == ""}>
+          <%= if @debug_info.is_valid && @form[:title].value != "", do: "Send 🫴", else: "Complete haiku" %>
+        </.button>
+      </:actions>
+    </.simple_form>
+  </div>
+</.modal> 

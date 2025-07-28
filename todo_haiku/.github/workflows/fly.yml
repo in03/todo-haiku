@@ -1,0 +1,28 @@
+name: Fly Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Fly
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        
+      - name: Create secret file
+        run: |
+          echo "SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}" > .env
+          echo "GITHUB_CLIENT_ID=${{ secrets.GITHUB_CLIENT_ID }}" >> .env
+          echo "GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }}" >> .env
+      
+      - name: Deploy to Fly
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }} 
