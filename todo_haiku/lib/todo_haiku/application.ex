@@ -14,6 +14,8 @@ defmodule TodoHaiku.Application do
       {Phoenix.PubSub, name: TodoHaiku.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: TodoHaiku.Finch},
+      # Start the hybrid ONNX + dictionary syllable counter
+      TodoHaiku.AxonSyllableCounter,
       # Start a worker by calling: TodoHaiku.Worker.start_link(arg)
       # {TodoHaiku.Worker, arg},
       # Start to serve requests, typically the last entry
