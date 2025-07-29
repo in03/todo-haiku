@@ -1,4 +1,4 @@
-app = "big-phoney-api"
+app = "syllable-api"
 primary_region = "syd"
 kill_signal = "SIGTERM"
 

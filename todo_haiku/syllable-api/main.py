@@ -1,29 +1,30 @@
 #!/usr/bin/env python3
 """
-Big Phoney API - FastAPI microservice for syllable counting
+Syllable API - FastAPI microservice for syllable counting with ONNX model
 """
 
 import warnings
-import os
 
 # Suppress warnings for cleaner logs
 warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow logging
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Dict, Any
-import big_phoney
+from typing import Any, Dict, List
+
 import uvicorn
+from fastapi import FastAPI, HTTPException
 
-# Initialize the big-phoney library
-phoney = big_phoney.BigPhoney()
+# Import our ONNX-based syllable service
+from onnx_syllable_counter import SyllableService
+from pydantic import BaseModel
+
+# Initialize the ONNX-based syllable service
+syllable_service = SyllableService()
 
 app = FastAPI(
-    title="Big Phoney API",
-    description="A microservice for syllable counting using the big-phoney ML library",
-    version="1.0.0"
+    title="Syllable API",
+    description="A microservice for syllable counting using ONNX ML model with CMU dictionary fallback",
+    version="2.0.0"
 )
 
 class SyllableRequest(BaseModel):
@@ -44,15 +45,15 @@ class HaikuResponse(BaseModel):
 @app.get("/")
 async def root():
     """Root endpoint with basic status."""
-    return {"message": "Big Phoney API is running", "version": "1.0.0"}
+    return {"message": "Syllable API is running", "version": "2.0.0"}
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
     return {
         "status": "healthy",
-        "service": "big-phoney-api",
-        "version": "1.0.0"
+        "service": "syllable-api",
+        "version": "2.0.0"
     }
 
 @app.post("/syllables/simple", response_model=SyllableResponse)
@@ -62,8 +63,8 @@ async def count_syllables_simple(request: SyllableRequest):
         if not request.text.strip():
             raise HTTPException(status_code=400, detail="Text cannot be empty")
         
-        # Count syllables using big-phoney
-        syllables = phoney.count_syllables(request.text)
+        # Count syllables using ONNX-based service
+        syllables = syllable_service.count_syllables(request.text)
         return SyllableResponse(syllables=syllables)
     
     except Exception as e:
@@ -84,7 +85,7 @@ async def count_syllables_detailed(request: SyllableRequest):
         total_syllables = 0
         
         for word in words:
-            word_syllables = phoney.count_syllables(word)
+            word_syllables = syllable_service.count_syllables(word)
             word_data.append({
                 "word": word,
                 "syllables": word_syllables
@@ -115,7 +116,7 @@ async def count_syllables_haiku(request: SyllableRequest):
         for line in lines:
             # Split line into words and count each word individually (for better dictionary lookup)
             words = line.split()
-            line_syllables = sum(phoney.count_syllables(word) for word in words)
+            line_syllables = sum(syllable_service.count_syllables(word) for word in words)
             line_data.append({
                 "line": line,
                 "syllables": line_syllables
