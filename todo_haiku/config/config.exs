@@ -62,9 +62,6 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-# Big Phoney microservice configuration
-config :todo_haiku, :big_phoney_endpoint, System.get_env("BIG_PHONEY_ENDPOINT") || "https://your-app-name.fly.dev"
-
 # Ueberauth configuration
 config :ueberauth, Ueberauth,
   providers: [

@@ -63,7 +63,10 @@ defmodule TodoHaiku.MixProject do
       {:ueberauth_github, "~> 0.8.1"},
 
       {:req, "~> 0.5.10"},
-      {:briefly, "~> 0.4"}
+      {:briefly, "~> 0.4"},
+
+      # ML Dependencies - Ortex for ONNX inference
+      {:ortex, "~> 0.1.10"}
     ]
   end
 
