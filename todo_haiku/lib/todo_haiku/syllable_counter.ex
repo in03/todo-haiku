@@ -10,14 +10,14 @@ defmodule TodoHaiku.SyllableCounter do
   Returns {:ok, syllable_count} on success or {:error, reason} on failure.
   """
   def count_syllables(text) when is_binary(text) do
-    TodoHaiku.AxonSyllableCounter.count_syllables(text)
+    TodoHaiku.OrtexSyllableCounter.count_syllables(text)
   end
 
   @doc """
   Count syllables in a line of text (for haiku validation).
   """
   def count_syllables_in_line(text) when is_binary(text) do
-    TodoHaiku.AxonSyllableCounter.count_syllables_in_line(text)
+    TodoHaiku.OrtexSyllableCounter.count_syllables_in_line(text)
   end
 
   @doc """
@@ -26,13 +26,13 @@ defmodule TodoHaiku.SyllableCounter do
   Takes a list of words and returns a map of word -> syllable count.
   """
   def count_syllables_batch(words) when is_list(words) do
-    TodoHaiku.AxonSyllableCounter.count_syllables_batch(words)
+    TodoHaiku.OrtexSyllableCounter.count_syllables_batch(words)
   end
 
   @doc """
   Count syllables for haiku lines (returns structured data for validation).
   """
   def count_syllables_haiku(content) when is_binary(content) do
-    TodoHaiku.AxonSyllableCounter.count_syllables_haiku(content)
+    TodoHaiku.OrtexSyllableCounter.count_syllables_haiku(content)
   end
 end

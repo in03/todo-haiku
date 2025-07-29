@@ -1,4 +1,4 @@
-defmodule TodoHaiku.AxonSyllableCounter do
+defmodule TodoHaiku.OrtexSyllableCounter do
   @moduledoc """
   Hybrid syllable counting using Ortex for real-time ML inference
   and CMU dictionary for accuracy on complete words.
@@ -79,11 +79,11 @@ defmodule TodoHaiku.AxonSyllableCounter do
   def init(_opts) do
     case load_models() do
       {:ok, state} ->
-        Logger.info("AxonSyllableCounter: Ortex ONNX model and CMU dictionary loaded successfully")
+        Logger.info("OrtexSyllableCounter: Ortex ONNX model and CMU dictionary loaded successfully")
         {:ok, state}
 
       {:error, reason} ->
-        Logger.error("AxonSyllableCounter: Failed to load models: #{inspect(reason)}")
+        Logger.error("OrtexSyllableCounter: Failed to load models: #{inspect(reason)}")
         {:stop, reason}
     end
   end
@@ -129,7 +129,7 @@ defmodule TodoHaiku.AxonSyllableCounter do
   end
 
   defp load_onnx_model do
-    model_path = "syllable-api/syllable_model.onnx"
+    model_path = "syllable_model.onnx"
 
     if File.exists?(model_path) do
       try do
@@ -156,7 +156,7 @@ defmodule TodoHaiku.AxonSyllableCounter do
   end
 
   defp load_cmu_dictionary do
-    dict_path = "syllable-api/cmudict/cmudict.dict"
+    dict_path = "cmudict.dict"
 
     if File.exists?(dict_path) do
       try do
