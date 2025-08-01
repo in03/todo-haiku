@@ -1,411 +1,536 @@
-<div class="mx-auto px-4 py-6 w-full">
-  <%!-- <h1 class="text-3xl font-bold mb-6 text-[var(--app-green-primary)]">Todo Haiku 🍃</h1> --%>
-
-  <div class="mb-6">
-    <div class="flex flex-col md:flex-row items-center gap-4 mb-6">
-      <%!-- Search Bar Moved to Root Layout --%>
-      <%!-- <div class="relative w-full md:w-64">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-        <input 
-          type="text" 
-          placeholder="Search tasks..." 
-          class="task-search pl-10"
-          phx-keyup="search" 
-          phx-debounce="300" 
-          name="search"
-        />
-      </div> --%>
-      
-      <div class="ml-auto">
-        <%!-- Original New Task button removed --%>
-        <%!-- <.link patch={~p"/tasks/new"} class="bg-[var(--app-green-primary)] text-white px-4 py-2 rounded-md hover:bg-[var(--app-green-primary-hover)] transition-colors">
-          New Task
-        </.link> --%>
-      </div>
-    </div>
-
-    <%= if Enum.empty?(@tasks) do %>
-      <div class="text-center py-10 bg-card rounded-lg">
-        <p class="text-muted-foreground">No tasks found. Create a new one!</p>
-      </div>
-    <% else %>
-      <!-- Kanban Board -->
-      <div id="kanban-board" class="grid grid-cols-4 gap-6" phx-hook="KanbanBoard">
-        <!-- Open Column -->
-        <% open_tasks = Enum.filter(@tasks, fn t -> 
-                t.status == "open" && 
-                (is_nil(@search_term) || @search_term == "" || 
-                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
-                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
-              end) %>
-        <% open_count = length(open_tasks) %>
-        <div class={[
-              "kanban-column",
-              open_count == 0 && "kanban-column-empty",
-              cond do
-                open_count >= 5 -> "task-count-high"
-                open_count >= 3 -> "task-count-medium"
-                open_count > 0 -> "task-count-low"
-                true -> ""
-              end
-            ]} 
-             data-status="open">
-          <div class="kanban-column-header">
-            <div class="header-glow"></div>
-            <h3 class="font-medium text-foreground flex items-center">
-              <span class="column-icon">🌱</span>
-              Seed
-              <.link patch={~p"/tasks/new?status=open"} id="new-task-in-open" class="column-action-button">
-                <div class="action-button-content">
-                  <div class="counter-view">
-                    <span class="task-counter-number"><%= open_count %></span>
-                  </div>
-                  <div class="plus-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </div>
-                </div>
-              </.link>
-            </h3>
-          </div>
-          <div class="kanban-column-content" data-column="open">
-            <%= for task <- open_tasks do %>
-              <div class="task-card cursor-move" data-task-id={task.id} data-status="open">
-                <div class="flex justify-between items-start">
-                  <div class="flex items-center">
-                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
-                      <span class="task-dot" data-status={task.status}></span>
-                    </.link>
-                    <h4 class="text-sm font-medium text-foreground">
-                      <%= task.title %>
-                    </h4>
-                  </div>
-                  <div class="flex space-x-1 items-center">
-                    <%!-- Original edit link removed --%>
-                  </div>
-                </div>
-                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
-                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
-                </div>
-              </div>
-            <% end %>
-            <%= if open_count == 0 do %>
-              <div class="text-center py-6 text-sm text-muted-foreground italic">
-                Drag tasks here...
-              </div>
-            <% end %>
-          </div>
-        </div>
-
-        <!-- Doing Column -->
-        <% doing_tasks = Enum.filter(@tasks, fn t -> 
-                t.status == "doing" && 
-                (is_nil(@search_term) || @search_term == "" || 
-                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
-                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
-              end) %>
-        <% doing_count = length(doing_tasks) %>
-        <div class={[
-              "kanban-column",
-              doing_count == 0 && "kanban-column-empty",
-              cond do
-                doing_count >= 5 -> "task-count-high"
-                doing_count >= 3 -> "task-count-medium"
-                doing_count > 0 -> "task-count-low"
-                true -> ""
-              end
-            ]} 
-             data-status="doing">
-          <div class="kanban-column-header">
-            <div class="header-glow"></div>
-            <h3 class="font-medium text-foreground flex items-center">
-              <span class="column-icon">🧹</span>
-              Tend
-              <.link patch={~p"/tasks/new?status=doing"} id="new-task-in-doing" class="column-action-button">
-                <div class="action-button-content">
-                  <div class="counter-view">
-                    <span class="task-counter-number"><%= doing_count %></span>
-                  </div>
-                  <div class="plus-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </div>
-                </div>
-              </.link>
-            </h3>
-          </div>
-          <div class="kanban-column-content" data-column="doing">
-            <%= for task <- doing_tasks do %>
-              <div class="task-card cursor-move" data-task-id={task.id} data-status="doing">
-                <div class="flex justify-between items-start">
-                  <div class="flex items-center">
-                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
-                      <span class="task-dot" data-status={task.status}></span>
-                    </.link>
-                    <h4 class="text-sm font-medium text-foreground">
-                      <%= task.title %>
-                    </h4>
-                  </div>
-                  <div class="flex space-x-1 items-center">
-                    <%!-- Original edit link removed --%>
-                  </div>
-                </div>
-                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
-                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
-                </div>
-              </div>
-            <% end %>
-            <%= if doing_count == 0 do %>
-              <div class="text-center py-6 text-sm text-muted-foreground italic">
-                Drag tasks here...
-              </div>
-            <% end %>
-          </div>
-        </div>
-
-        <!-- Done Column -->
-        <% done_tasks = Enum.filter(@tasks, fn t -> 
-                t.status == "done" && 
-                (is_nil(@search_term) || @search_term == "" || 
-                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
-                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
-              end) %>
-        <% done_count = length(done_tasks) %>
-        <div class={[
-              "kanban-column",
-              done_count == 0 && "kanban-column-empty",
-              cond do
-                done_count >= 5 -> "task-count-high"
-                done_count >= 3 -> "task-count-medium"
-                done_count > 0 -> "task-count-low"
-                true -> ""
-              end
-            ]} 
-             data-status="done">
-          <div class="kanban-column-header">
-            <div class="header-glow"></div>
-            <h3 class="font-medium text-foreground flex items-center">
-              <span class="column-icon">🍎</span>
-              Fruit
-              <.link patch={~p"/tasks/new?status=done"} id="new-task-in-done" class="column-action-button">
-                <div class="action-button-content">
-                  <div class="counter-view">
-                    <span class="task-counter-number"><%= done_count %></span>
-                  </div>
-                  <div class="plus-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </div>
-                </div>
-              </.link>
-            </h3>
-          </div>
-          <div class="kanban-column-content" data-column="done">
-            <%= for task <- done_tasks do %>
-              <div class="task-card cursor-move" data-task-id={task.id} data-status="done">
-                <div class="flex justify-between items-start">
-                  <div class="flex items-center">
-                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
-                      <span class="task-dot" data-status={task.status}></span>
-                    </.link>
-                    <h4 class="text-sm font-medium text-foreground">
-                      <%= task.title %>
-                    </h4>
-                  </div>
-                  <div class="flex space-x-1 items-center">
-                    <%!-- Original edit link removed --%>
-                  </div>
-                </div>
-                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
-                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
-                </div>
-              </div>
-            <% end %>
-            <%= if done_count == 0 do %>
-              <div class="text-center py-6 text-sm text-muted-foreground italic">
-                Drag tasks here...
-              </div>
-            <% end %>
-          </div>
-        </div>
-
-        <!-- Blocked Column -->
-        <% blocked_tasks = Enum.filter(@tasks, fn t -> 
-                t.status == "blocked" && 
-                (is_nil(@search_term) || @search_term == "" || 
-                 String.contains?(String.downcase(t.title), String.downcase(@search_term)) || 
-                 String.contains?(String.downcase(t.content), String.downcase(@search_term))) 
-              end) %>
-        <% blocked_count = length(blocked_tasks) %>
-        <div class={[
-              "kanban-column",
-              blocked_count == 0 && "kanban-column-empty",
-              cond do
-                blocked_count >= 5 -> "task-count-high"
-                blocked_count >= 3 -> "task-count-medium"
-                blocked_count > 0 -> "task-count-low"
-                true -> ""
-              end
-            ]} 
-             data-status="blocked">
-          <div class="kanban-column-header">
-            <div class="header-glow"></div>
-            <h3 class="font-medium text-foreground flex items-center">
-              <span class="column-icon">🍂</span>
-              Withheld
-              <.link patch={~p"/tasks/new?status=blocked"} id="new-task-in-blocked" class="column-action-button">
-                <div class="action-button-content">
-                  <div class="counter-view">
-                    <span class="task-counter-number"><%= blocked_count %></span>
-                  </div>
-                  <div class="plus-view">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </div>
-                </div>
-              </.link>
-            </h3>
-          </div>
-          <div class="kanban-column-content" data-column="blocked">
-            <%= for task <- blocked_tasks do %>
-              <div class="task-card cursor-move" data-task-id={task.id} data-status="blocked">
-                <div class="flex justify-between items-start">
-                  <div class="flex items-center">
-                    <.link patch={~p"/tasks/#{task.id}/edit"} class="task-dot-link">
-                      <span class="task-dot" data-status={task.status}></span>
-                    </.link>
-                    <h4 class="text-sm font-medium text-foreground">
-                      <%= task.title %>
-                    </h4>
-                  </div>
-                  <div class="flex space-x-1 items-center">
-                    <%!-- Original edit link removed --%>
-                  </div>
-                </div>
-                <div class="mt-2 text-xs italic font-serif text-muted-foreground haiku-content">
-                  <%= task.content |> Phoenix.HTML.html_escape() |> safe_to_string() |> String.replace("\n", "<br>") |> raw() %>
-                </div>
-              </div>
-            <% end %>
-            <%= if blocked_count == 0 do %>
-              <div class="text-center py-6 text-sm text-muted-foreground italic">
-                Drag tasks here...
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    <% end %>
+<!-- Zen Haiku Writing Interface -->
+<div class="zen-writing-space" 
+     id="zen-container" 
+     phx-hook="ZenTransition"
+     x-data="haikuEnforcement()"
+     data-syllable-counts={Enum.join(@debug_info.syllable_counts, ",")}
+     data-over-limit-line={@debug_info.over_limit_line || "nil"}
+     x-bind:class="{ 'shake-animation': isShaking }">
+  <!-- Floating controls (minimal and hidden until needed) -->
+  <div class="zen-controls" id="zen-controls" style="opacity: 0;">
+    <button 
+      type="button" 
+      class="zen-control-btn" 
+      phx-click="show-haiku-list"
+      title="View all haikus">
+      <span class="text-sm">📖</span>
+    </button>
+    <button 
+      type="button" 
+      class="zen-control-btn" 
+      phx-click="new-haiku"
+      title="New haiku">
+      <span class="text-sm">✨</span>
+    </button>
   </div>
-</div>
 
-<.modal :if={@live_action in [:new, :edit]} id="task-modal" show on_cancel={JS.patch(~p"/tasks")}>
-  <div class="max-w-xl mx-auto my-12 rounded-xl shadow-2xl bg-card text-foreground p-8 border border-border">
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-foreground mb-1"><%= @page_title %></h2>
-      <p class="text-muted-foreground text-sm">Create a new task with a haiku description</p>
-    </div>
-
-    <.simple_form
-      for={@form}
-      id="task-form"
-      phx-change="validate"
-      phx-submit="save"
-      phx-trigger-action={@trigger_submit}
-    >
-      <.input field={@form[:title]} type="text" placeholder="Task Title" class="bg-muted/80 text-foreground border border-border rounded-md focus:ring-[var(--app-green-primary)]" />
-      <%= if @form[:title].errors != [] do %>
-        <div class="mt-1 text-sm text-destructive">
-          Task title is required
-        </div>
-      <% end %>
+  <!-- Main writing area -->
+  <div class="zen-note-container" id="note-container">
+    <!-- Animated haiku card -->
+    <div class={[
+      "zen-haiku-card",
+      @task && "expanded" || "collapsed"
+    ]} id="haiku-card" phx-hook="ZenCardManager">
       
-      <div class="mb-4">
-        <div class="flex justify-between items-center mb-1">
-          <span class="text-sm text-foreground">Wax poetic...</span>
-          <button type="button" phx-click="generate_template" class="text-xs text-[var(--app-green-primary)] hover:text-[var(--app-green-primary-hover)]">
-            ✨ Example
-          </button>
-        </div>
-        
-        <.input field={@form[:content]} type="textarea" rows="3" phx-debounce="50" placeholder="Write your haiku here..." class="font-serif resize-none bg-muted/80 text-foreground border border-border rounded-md focus:ring-[var(--app-green-primary)]" required />
-        
-        <div class="mt-3 flex justify-between text-xs text-muted-foreground">
-          <div class="flex-1 relative z-10">
-            <span class={[
-              "block py-1 px-2 z-10 relative",
-              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "text-foreground",
-              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5) && "text-muted-foreground"
-            ]}>
-              Line 1: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0)) || 0 %>/5
-            </span>
-            <div class={[
-              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out rounded-l-md",
-              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5 && "bg-[var(--app-green-primary)]/10 border border-[var(--app-green-primary)]",
-              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 0) == 5) && "bg-transparent"
-            ]}></div>
+      <!-- Card header with title -->
+      <div class="zen-card-header">
+        <%= if @task do %>
+          <!-- Expanded state: title on the left -->
+          <div class="zen-title-expanded">
+            <h2 class="zen-title-text"><%= @task.title %></h2>
           </div>
-          <div class="flex-1 relative z-20 -mx-[1px]">
-            <span class={[
-              "block py-1 px-2 z-10 relative",
-              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "text-foreground",
-              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7) && "text-muted-foreground"
-            ]}>
-              Line 2: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1)) || 0 %>/7
-            </span>
-            <div class={[
-              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out",
-              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7 && "bg-[var(--app-green-primary)]/10 border border-[var(--app-green-primary)]",
-              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 1) == 7) && "bg-transparent"
-            ]}></div>
+        <% else %>
+          <!-- Collapsed state: centered title input -->
+          <div class="zen-title-collapsed">
+            <div class="zen-leaf-icon">🍃</div>
+            <input 
+              type="text" 
+              name="title" 
+              placeholder="What's on your mind?"
+              class="zen-title-input"
+              id="zen-title-input"
+              autocomplete="off"
+              autofocus
+              phx-hook="ZenTitleInput"
+            />
+            <div class="zen-hint">Press Enter to begin your haiku</div>
           </div>
-          <div class="flex-1 relative z-10 -ml-[1px]">
-            <span class={[
-              "block py-1 px-2 z-10 relative",
-              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "text-foreground",
-              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5) && "text-muted-foreground"
-            ]}>
-              Line 3: <%= (@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2)) || 0 %>/5
-            </span>
-            <div class={[
-              "absolute top-0 left-0 right-0 bottom-0 transition-all duration-700 ease-in-out rounded-r-md",
-              @debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5 && "bg-[var(--app-green-primary)]/10 border border-[var(--app-green-primary)]",
-              !(@debug_info.syllable_counts && Enum.at(@debug_info.syllable_counts, 2) == 5) && "bg-transparent"
-            ]}></div>
-          </div>
-        </div>
-        
-        <%= if !@debug_info.is_valid && @form[:content].value && @form[:content].value != "" do %>
-          <p class="text-sm mt-2 text-yellow-500">
-            Please enter a <a href="https://en.wikipedia.org/wiki/Haiku_in_English#Syllables" target="_blank" class="underline hover:text-yellow-400">valid haiku</a> (5-7-5 syllables)
-          </p>
         <% end %>
       </div>
-      
-      <.input field={@form[:status]} type="select" options={[{"Seed 🌱", "open"}, {"Tend 🧹", "doing"}, {"Fruit 🍎", "done"}, {"Withheld 🍂", "blocked"}]} label="Status" class="bg-muted/80 text-foreground border border-border rounded-md focus:ring-[var(--app-green-primary)]" />
 
-      <:actions>
-        <!-- Simple debug info box -->
-        <div class="mb-2 p-2 bg-muted/70 rounded text-xs text-muted-foreground">
-          <p>Haiku valid: <%= @debug_info.is_valid %> | Line syllables: <%= inspect(@debug_info.syllable_counts || [0,0,0]) %></p>
+      <!-- Card body (only visible when expanded) -->
+      <%= if @task do %>
+        <div class="zen-card-body">
+          <div class="zen-content-area">
+            <textarea 
+              name="content"
+              placeholder="Five syllables here&#10;Seven syllables on this line&#10;Five syllables here"
+              class="zen-content-textarea"
+              id="zen-content-textarea"
+              rows="3"
+              phx-debounce="300"
+              phx-hook="ZenContentInput"
+              @keydown="handleKeydown($event)"
+              x-effect="updateSyllableCounts($el.closest('#zen-container').dataset.syllableCounts)"
+              value={@task.content || ""}></textarea>
+          </div>
+          
+          <!-- Syllable feedback (subtle) -->
+          <%= if @debug_info.syllable_counts && Enum.any?(@debug_info.syllable_counts, &(&1 > 0)) do %>
+            <div class="zen-syllable-feedback">
+              <div class="syllable-dots">
+                <%= for {count, index} <- Enum.with_index(@debug_info.syllable_counts) do %>
+                  <div class={[
+                    "syllable-line",
+                    case index do
+                      0 -> cond do
+                        count == 5 -> "correct"
+                        count > 0 -> "needs-work"
+                        true -> "empty"
+                      end
+                      1 -> cond do
+                        count == 7 -> "correct"
+                        count > 0 -> "needs-work"
+                        true -> "empty"
+                      end
+                      2 -> cond do
+                        count == 5 -> "correct"
+                        count > 0 -> "needs-work"
+                        true -> "empty"
+                      end
+                    end
+                  ]}>
+                    <%= for i <- 1..max(count, case index do; 0 -> 5; 1 -> 7; 2 -> 5; end) do %>
+                      <span class={["syllable-dot", if(i <= count, do: "filled", else: "empty")]}></span>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Haiku list (overlay when needed) -->
+  <%= if @live_action == :list do %>
+    <div class="zen-haiku-list-overlay" id="haiku-list-overlay">
+      <div class="zen-haiku-list">
+        <div class="list-header">
+          <h2>Your Haikus</h2>
+          <button type="button" class="close-list-btn" phx-click="close-list">×</button>
         </div>
         
-        <.button 
-          type="submit" 
-          class={if !@debug_info.is_valid || @form[:title].value == "", do: "w-full opacity-50 cursor-not-allowed rounded-md", else: "w-full rounded-md bg-[var(--app-green-primary)] text-white hover:bg-[var(--app-green-primary-hover)] transition"}
-          phx-disable-with="Sending..." 
-          disabled={!@debug_info.is_valid || @form[:title].value == ""}>
-          <%= if @debug_info.is_valid && @form[:title].value != "", do: "Send 🫴", else: "Complete haiku" %>
-        </.button>
-      </:actions>
-    </.simple_form>
-  </div>
-</.modal> 
+        <div class="haiku-grid">
+          <%= for task <- @tasks do %>
+            <div class="haiku-card" phx-click="edit-haiku" phx-value-id={task.id}>
+              <h3 class="haiku-card-title"><%= task.title %></h3>
+              <div class="haiku-card-content">
+                <%= task.content |> String.replace("\n", "<br>") |> raw() %>
+              </div>
+              <div class="haiku-card-status">
+                <%= case task.status do %>
+                  <% "open" -> %><span class="status-badge seed">🌱 Seed</span>
+                  <% "doing" -> %><span class="status-badge tend">🧹 Tend</span>
+                  <% "done" -> %><span class="status-badge fruit">🍎 Fruit</span>
+                  <% "blocked" -> %><span class="status-badge withheld">🍂 Withheld</span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<!-- Custom styles for zen interface -->
+<style>
+  .zen-writing-space {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    padding: 2rem;
+  }
+
+  .zen-controls {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 50;
+    transition: opacity 0.5s ease;
+  }
+
+  .zen-control-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .zen-control-btn:hover {
+    background: rgba(100, 116, 139, 0.2);
+    color: #e2e8f0;
+    transform: translateY(-2px);
+  }
+
+  .zen-note-container {
+    width: 100%;
+    max-width: 600px;
+    perspective: 1000px;
+  }
+
+  .zen-empty-state {
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: float-in 0.8s ease-out;
+  }
+
+  .zen-leaf-icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.7;
+    animation: gentle-sway 4s ease-in-out infinite;
+  }
+
+  .zen-title-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 1.5rem;
+    color: #e2e8f0;
+    text-align: center;
+    padding: 1rem 0;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .zen-title-input::placeholder {
+    color: #64748b;
+  }
+
+  .zen-hint {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+    opacity: 0.8;
+  }
+
+  .zen-writing-state {
+    background: rgba(30, 41, 59, 0.9);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: expand-in 0.6s ease-out;
+  }
+
+  .zen-title-field input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+    color: #e2e8f0;
+    font-size: 1.25rem;
+    padding: 0.75rem 0;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .zen-haiku-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e2e8f0;
+    font-family: 'Noto Serif', serif;
+    font-size: 1.125rem;
+    line-height: 1.8;
+    text-align: center;
+    resize: none;
+    padding: 1rem 0;
+  }
+
+  .zen-haiku-textarea::placeholder {
+    color: #475569;
+    font-style: italic;
+  }
+
+  .zen-syllable-feedback {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .syllable-dots {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .syllable-line {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+  }
+
+  .syllable-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #334155;
+    transition: all 0.3s ease;
+  }
+
+  .syllable-dot.filled {
+    background: #10b981;
+  }
+
+  .syllable-line.correct .syllable-dot.filled {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  }
+
+  .syllable-line.needs-work .syllable-dot.filled {
+    background: #f59e0b;
+  }
+
+  .zen-save-section {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .zen-save-btn {
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 0.75rem 2rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .zen-save-btn.waiting {
+    background: #475569;
+    cursor: not-allowed;
+  }
+
+  .zen-save-btn.ready:hover {
+    background: #059669;
+    transform: translateY(-2px);
+  }
+
+  .zen-cancel-btn {
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 25px;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .zen-cancel-btn:hover {
+    color: #e2e8f0;
+    border-color: #94a3b8;
+  }
+
+  /* Animations */
+  @keyframes float-in {
+    0% {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes expand-in {
+    0% {
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes gentle-sway {
+    0%, 100% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
+  }
+
+  /* Haiku list overlay */
+  .zen-haiku-list-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fade-in 0.3s ease;
+  }
+
+  .zen-haiku-list {
+    background: rgba(30, 41, 59, 0.9);
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slide-up 0.4s ease;
+  }
+
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    color: #e2e8f0;
+  }
+
+  .close-list-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+
+  .close-list-btn:hover {
+    background: rgba(148, 163, 184, 0.1);
+    color: #e2e8f0;
+  }
+
+  .haiku-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .haiku-card {
+    background: rgba(51, 65, 85, 0.5);
+    border-radius: 15px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .haiku-card:hover {
+    transform: translateY(-5px);
+    background: rgba(51, 65, 85, 0.7);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  .haiku-card-title {
+    color: #e2e8f0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .haiku-card-content {
+    color: #cbd5e1;
+    font-family: 'Noto Serif', serif;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    font-style: italic;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .status-badge.seed { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+  .status-badge.tend { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+  .status-badge.fruit { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+  .status-badge.withheld { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+  @keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes slide-up {
+    0% {
+      opacity: 0;
+      transform: translateY(50px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Show controls on hover */
+  .zen-writing-space:hover .zen-controls {
+    opacity: 1;
+  }
+
+  /* Shake animation for invalid input feedback */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+  }
+
+  .shake-animation {
+    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+    transform-origin: center;
+  }
+</style>
+
+<script>
+  // Auto-show controls after a moment of inactivity
+  let controlsTimeout;
+  function showControls() {
+    document.getElementById('zen-controls').style.opacity = '1';
+    clearTimeout(controlsTimeout);
+    controlsTimeout = setTimeout(() => {
+      document.getElementById('zen-controls').style.opacity = '0';
+    }, 3000);
+  }
+
+  // Show controls briefly on load, then hide
+  setTimeout(showControls, 1000);
+</script> 

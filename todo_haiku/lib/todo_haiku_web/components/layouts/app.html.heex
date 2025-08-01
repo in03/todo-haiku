@@ -1,6 +1,13 @@
 <main class="w-full h-full">
-  <div class="mx-auto max-w-7xl">
+  <%= if Map.get(assigns, :zen_mode, false) do %>
+    <!-- Zen interface - no container constraints -->
     <.flash_group flash={@flash} />
     <%= @inner_content %>
-  </div>
+  <% else %>
+    <!-- Regular interface - with container -->
+    <div class="mx-auto max-w-7xl">
+      <.flash_group flash={@flash} />
+      <%= @inner_content %>
+    </div>
+  <% end %>
 </main>

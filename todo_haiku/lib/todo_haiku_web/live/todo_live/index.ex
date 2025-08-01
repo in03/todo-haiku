@@ -14,15 +14,13 @@ defmodule TodoHaikuWeb.TodoLive.Index do
      |> assign(:tasks, tasks)
      |> assign(:filter, "all")
      |> assign(:search_term, nil)
-     |> assign(:template_task, %Task{})
-     |> assign(:changeset, Todos.change_task(%Task{}))
-     |> assign(:form, nil)
-     |> assign(:trigger_submit, false)
+     |> assign(:task, nil)
      |> assign(:debug_info, %{
          last_validation: nil,
          validation_count: 0,
          is_valid: false,
-         syllable_counts: [0, 0, 0]
+         syllable_counts: [0, 0, 0],
+         over_limit_line: nil
        })
      |> assign(:page_title, "TodoHaiku")}
   end
@@ -36,7 +34,13 @@ defmodule TodoHaikuWeb.TodoLive.Index do
     socket
     |> assign(:page_title, "TodoHaiku")
     |> assign(:task, nil)
-    |> assign(:form, to_form(Todos.change_task(%Task{})))
+  end
+
+  defp apply_action(socket, :list, _params) do
+    socket
+    |> assign(:page_title, "All Haikus")
+    |> assign(:task, nil)
+    |> assign(:form, nil)
   end
 
   defp apply_action(socket, :new, params) do
@@ -98,316 +102,264 @@ defmodule TodoHaikuWeb.TodoLive.Index do
     |> assign(:debug_info, debug_info)
   end
 
-  @impl true
-  def handle_event("search", %{"value" => search_term}, socket) do
-    # Update the search term in the socket assigns
-    {:noreply, assign(socket, :search_term, search_term)}
-  end
-
-  # When no value key is found, this might be coming directly from the input
-  @impl true
-  def handle_event("search", params, socket) do
-    search_term = Map.get(params, "search", "")
-    {:noreply, assign(socket, :search_term, search_term)}
-  end
-
-  @impl true
-  def handle_event("filter", %{"filter" => filter}, socket) do
-    tasks = case filter do
-      "all" -> Todos.list_tasks()
-      "active" -> Todos.list_tasks() |> Enum.filter(fn task -> !task.is_completed end)
-      "completed" -> Todos.list_tasks() |> Enum.filter(fn task -> task.is_completed end)
-      _ -> Todos.list_tasks()
-    end
-
-    {:noreply, socket |> assign(:tasks, tasks) |> assign(:filter, filter)}
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    task = Todos.get_task!(id)
-    {:ok, _} = Todos.delete_task(task)
-
-    tasks = case socket.assigns.filter do
-      "all" -> Todos.list_tasks()
-      "active" -> Todos.list_tasks() |> Enum.filter(fn task -> !task.is_completed end)
-      "completed" -> Todos.list_tasks() |> Enum.filter(fn task -> task.is_completed end)
-      _ -> Todos.list_tasks()
-    end
-
-    {:noreply, assign(socket, :tasks, tasks)}
-  end
-
-  # @impl true
-  # def handle_event("toggle", %{"id" => id}, socket) do
-  #   task = Todos.get_task!(id)
-  #   {:ok, _updated_task} = Todos.update_task(task, %{is_completed: !task.is_completed})
-  #
-  #   tasks = case socket.assigns.filter do
-  #     "all" -> Todos.list_tasks()
-  #     "active" -> Todos.list_tasks() |> Enum.filter(fn t -> !t.is_completed end)
-  #     "completed" -> Todos.list_tasks() |> Enum.filter(fn t -> t.is_completed end)
-  #     _ -> Todos.list_tasks()
-  #   end
-  #
-  #   {:noreply, assign(socket, :tasks, tasks)}
-  # end
-
-  @impl true
-  def handle_event("validate", %{"task" => task_params}, socket) do
-    # Log for debugging
-    IO.puts("Validating task with params: #{inspect(task_params)}")
-
-    # Get the current validation count and increment it
-    current_count = socket.assigns.debug_info.validation_count || 0
-
-    # Create a base task with the content from params
-    content = Map.get(task_params, "content", "")
-
-    # Log content
-    IO.puts("Content to validate: #{inspect(content)}")
-
-    if is_nil(content) or content == "" do
-      # Handle empty content immediately
-      debug_info = %{
-        last_validation: DateTime.utc_now(),
-        validation_count: current_count + 1,
-        is_valid: false,
-        syllable_counts: [0, 0, 0]
-      }
-
-      changeset =
-        socket.assigns.task
-        |> Todos.change_task(task_params)
-        |> Map.put(:action, :validate)
-
-      {:noreply,
-        socket
-        |> assign(:debug_info, debug_info)
-        |> assign(:form, to_form(changeset))
-      }
-    else
-      # Use hybrid ONNX + dictionary approach for optimal speed and accuracy
-      IO.puts("Validating haiku with hybrid ONNX + dictionary approach: #{inspect(content)}")
-
-      case TodoHaiku.SyllableCounter.count_syllables_haiku(content) do
-        {:ok, %{"lines" => lines}} ->
-          # Extract syllable counts from the lines
-          syllable_counts = Enum.map(lines, & &1["syllables"])
-
-          # Pad to exactly 3 lines for haiku
-          syllable_counts = case length(syllable_counts) do
-            0 -> [0, 0, 0]
-            1 -> syllable_counts ++ [0, 0]
-            2 -> syllable_counts ++ [0]
-            3 -> syllable_counts
-            _ -> Enum.take(syllable_counts, 3)
-          end
-
-          # Check if it's a valid haiku (5-7-5 pattern)
-          is_valid = syllable_counts == [5, 7, 5]
-
-          # Generate feedback
-          feedback = if is_valid do
-            "Perfect haiku! You're a natural poet."
-          else
-            "Not quite a haiku yet. Keep adjusting your words."
-          end
-
-          # Update debug info with validation results
-          debug_info = %{
-            last_validation: DateTime.utc_now(),
-            validation_count: current_count + 1,
-            is_valid: is_valid,
-            syllable_counts: syllable_counts
-          }
-
-          # Create changeset with validation results
-          task_params_with_validation = task_params
-          |> Map.merge(%{
-            "is_valid_haiku" => is_valid,
-            "syllable_counts" => syllable_counts,
-            "feedback" => feedback
-          })
-
-          changeset =
-            socket.assigns.task
-            |> Todos.change_task(task_params_with_validation)
-            |> Map.put(:action, :validate)
-
-          IO.puts("Hybrid validation complete: is_valid=#{is_valid}, syllable_counts=#{inspect(syllable_counts)}")
-
-          {:noreply,
-            socket
-            |> assign(:form, to_form(changeset))
-            |> assign(:debug_info, debug_info)
-          }
-
-        {:error, reason} ->
-          IO.puts("Hybrid validation failed: #{inspect(reason)}")
-
-          # Handle error gracefully
-          changeset =
-            socket.assigns.task
-            |> Todos.change_task(task_params)
-            |> Map.put(:action, :validate)
-
-          {:noreply,
-            socket
-            |> assign(:form, to_form(changeset))
-            |> assign(:debug_info, %{
-              last_validation: DateTime.utc_now(),
-              validation_count: current_count + 1,
-              is_valid: false,
-              syllable_counts: [0, 0, 0]
-            })
-          }
-      end
-    end
-  end
-
-  @impl true
-  def handle_event("save", %{"task" => task_params}, socket) do
-    # Log save attempt
-    IO.puts("Attempting to save task with params: #{inspect(task_params)}")
-
-    # Use the cached validation state from debug_info
-    is_valid = socket.assigns.debug_info.is_valid
-    # Don't use syllable_counts in this function, prefix with underscore to ignore
-    _syllable_counts = socket.assigns.debug_info.syllable_counts
-
-    # Log validation status for save
-    IO.puts("Is valid for save: #{inspect(is_valid)}")
-
-    # Only proceed with save if haiku is valid
-    if is_valid do
-      IO.puts("Task is valid, proceeding with save")
-      save_task(socket, socket.assigns.live_action, task_params)
-    else
-      IO.puts("Task is invalid, not saving")
-      # Create a changeset with errors
-      changeset =
-        socket.assigns.task
-        |> Todos.change_task(task_params)
-        |> Map.put(:action, :validate)
-        |> Ecto.Changeset.add_error(:content, "must be a valid haiku with 5-7-5 syllable pattern")
-
-      {:noreply, assign(socket, :form, to_form(changeset))}
-    end
-  end
-
-  @impl true
-  def handle_event("generate_template", _, socket) do
-    # Generate a template haiku and title
-    examples = [
-      {"Do Laundry",
-       "High piles of laundry\nGetting so tired of this\nWhen will it all end?"},
-
-      {"Morning Exercise",
-       "Early morning run\nFeet pounding on the pavement\nStrength builds with each step"},
-
-      {"Study Session",
-       "Books spread on the desk\nKnowledge flows through fingertips\nMind grows like a tree"},
-
-      {"Self Care Evening",
-       "Candles flicker soft\nRelaxation washes through\nTime just for myself"},
-
-      {"Grocery Shopping",
-       "Empty pantry calls\nWheels squeak along tile floors\nFridge now overflows"}
+  # Generate template haiku - always fails validation to encourage custom content
+  defp generate_template() do
+    templates = [
+      "Here in this moment\nI ponder what words to write\nMy heart speaks softly",
+      "Morning light breaking\nThrough windows of my spirit\nNew day calls to me",
+      "Gentle rain falling\nWashing away yesterday\nFresh starts everywhere"
     ]
-
-    # Pick a random example
-    {title, content} = Enum.random(examples)
-
-    # Update the form with the template
-    task_params = %{"title" => title, "content" => content}
-    changeset =
-      socket.assigns.task
-      |> Todos.change_task(task_params)
-      |> Map.put(:action, :validate)
-
-    # Validate the haiku
-    {is_valid, syllable_counts, feedback} = HaikuValidator.validate_haiku(content)
-
-    changeset =
-      changeset
-      |> Ecto.Changeset.put_change(:is_valid_haiku, is_valid)
-      |> Ecto.Changeset.put_change(:syllable_counts, syllable_counts)
-      |> Ecto.Changeset.put_change(:feedback, feedback)
-
-    # Update the debug info
-    debug_info = %{
-      last_validation: DateTime.utc_now(),
-      validation_count: socket.assigns.debug_info.validation_count + 1,
-      is_valid: is_valid,
-      syllable_counts: syllable_counts
-    }
-
-    {:noreply,
-      socket
-      |> assign(:form, to_form(changeset))
-      |> assign(:debug_info, debug_info)
-    }
-  end
-
-  @impl true
-  def handle_event("task-moved", %{"id" => id, "status" => new_status, "position" => position}, socket) do
-    # Log the task move
-    IO.puts("Task #{id} moved to #{new_status} at position #{position}")
-
-    # Get the task
-    task = Todos.get_task!(id)
-
-    # Reposition the task
-    case Todos.reposition_task(task, new_status, position) do
-      {:ok, _} ->
-        IO.puts("Task repositioned successfully: #{id}")
-
-        # Refresh the task list
-        tasks = case socket.assigns.filter do
-          "all" -> Todos.list_tasks()
-          "active" -> Todos.list_tasks() |> Enum.filter(fn t -> !t.is_completed end)
-          "completed" -> Todos.list_tasks() |> Enum.filter(fn t -> t.is_completed end)
-          _ -> Todos.list_tasks()
-        end
-
-        {:noreply, assign(socket, :tasks, tasks)}
-
-      {:error, reason} ->
-        IO.puts("Error repositioning task: #{inspect(reason)}")
-        {:noreply, socket}
-    end
-  end
-
-  defp save_task(socket, :edit, task_params) do
-    case Todos.update_task(socket.assigns.task, task_params) do
-      {:ok, _task} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Task updated successfully")
-         |> push_navigate(to: ~p"/tasks")}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :form, to_form(changeset))}
-    end
-  end
-
-  defp save_task(socket, :new, task_params) do
-    case Todos.create_task(task_params) do
-      {:ok, _task} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Task created successfully")
-         |> push_navigate(to: ~p"/tasks")}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
-    end
+    Enum.random(templates)
   end
 
   # Handle any other messages (async handlers removed since we use direct inference)
   @impl true
   def handle_info(_message, socket) do
     {:noreply, socket}
+  end
+
+  # Event handlers grouped together
+  @impl true
+  def handle_event("search", %{"value" => search_term}, socket) do
+    tasks = if search_term != "" do
+      # Simple search by title and content
+      all_tasks = Todos.list_tasks()
+      search_lower = String.downcase(search_term)
+
+      Enum.filter(all_tasks, fn task ->
+        title_match = task.title && String.contains?(String.downcase(task.title), search_lower)
+        content_match = task.content && String.contains?(String.downcase(task.content), search_lower)
+        title_match || content_match
+      end)
+    else
+      Todos.list_tasks()
+    end
+    {:noreply, assign(socket, tasks: tasks, search_term: search_term)}
+  end
+
+  @impl true
+  def handle_event("search", params, socket) do
+    IO.inspect(params, label: "Unexpected search params")
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("filter", %{"filter" => filter}, socket) do
+    tasks = case filter do
+      "all" -> Todos.list_tasks()
+      status -> Todos.list_tasks_by_status(status)
+    end
+    {:noreply, assign(socket, tasks: tasks, filter: filter)}
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    task = Todos.get_task!(id)
+    {:ok, _} = Todos.delete_task(task)
+    tasks = Todos.list_tasks()
+    {:noreply, assign(socket, tasks: tasks)}
+  end
+
+  @impl true
+  def handle_event("start-haiku", %{"title" => title}, socket) do
+    # Create new task with the provided title
+    task = %Task{
+      title: title,
+      content: "",
+      is_valid_haiku: false,
+      syllable_counts: [0, 0, 0],
+      feedback: "Enter your haiku",
+      status: "open"
+    }
+
+    {:noreply,
+     socket
+     |> assign(:task, task)
+     |> assign(:page_title, "New Haiku")}
+  end
+
+  @impl true
+  def handle_event("validate-content", %{"content" => content}, socket) do
+    task = socket.assigns.task
+    updated_task = %{task | content: content}
+
+    # Get previous syllable counts for over-limit detection
+    previous_syllable_counts = socket.assigns.debug_info.syllable_counts || [0, 0, 0]
+
+    # Validate the haiku content
+    validation_result = HaikuValidator.validate_haiku(content)
+
+    # Handle validation result - HaikuValidator returns {is_valid, syllable_counts, feedback}
+    {is_valid, syllable_counts, feedback} = case validation_result do
+      {valid, counts, msg} when is_boolean(valid) and is_list(counts) and is_binary(msg) ->
+        {valid, ensure_three_counts(counts), msg}
+      _ ->
+        {false, [0, 0, 0], "Invalid validation result"}
+    end
+
+    updated_task = %{updated_task |
+      syllable_counts: syllable_counts,
+      is_valid_haiku: is_valid,
+      feedback: feedback
+    }
+
+    # Check for over-limit situation (went from at limit to over limit)
+    over_limit_line = detect_over_limit(previous_syllable_counts, syllable_counts)
+    IO.puts("Over-limit detection: previous=#{inspect(previous_syllable_counts)}, current=#{inspect(syllable_counts)}, result=#{inspect(over_limit_line)}")
+
+    # Update debug info with all necessary fields
+    debug_info = %{
+      syllable_counts: syllable_counts,
+      is_valid: is_valid,
+      last_validation: DateTime.utc_now(),
+      validation_count: socket.assigns.debug_info.validation_count + 1,
+      over_limit_line: over_limit_line
+    }
+
+    socket_with_updates = socket
+      |> assign(:task, updated_task)
+      |> assign(:debug_info, debug_info)
+      |> push_event("syllable-update", %{
+        syllable_counts: syllable_counts,
+        over_limit_line: over_limit_line
+      })
+
+    {:noreply, socket_with_updates}
+  end
+
+  @impl true
+  def handle_event("cancel-haiku", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:task, nil)
+     |> assign(:page_title, "TodoHaiku")}
+  end
+
+  @impl true
+  def handle_event("save-haiku", _params, socket) do
+    task = socket.assigns.task
+
+    if task && task.is_valid_haiku && task.title && String.trim(task.title) != "" do
+      case Todos.create_task(%{
+        title: task.title,
+        content: task.content,
+        status: "open"
+      }) do
+        {:ok, _created_task} ->
+          {:noreply,
+           socket
+           |> assign(:task, nil)
+           |> assign(:tasks, Todos.list_tasks())
+           |> assign(:page_title, "TodoHaiku")
+           |> put_flash(:info, "Haiku saved!")}
+
+        {:error, _changeset} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Could not save haiku")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("generate_template", _, socket) do
+    template_content = generate_template()
+    changeset = Todos.change_task(socket.assigns.template_task, %{content: template_content})
+    {:noreply, assign(socket, changeset: changeset)}
+  end
+
+  @impl true
+  def handle_event("task-moved", %{"id" => id, "status" => new_status, "position" => position}, socket) do
+    task = Todos.get_task!(id)
+    {:ok, _task} = Todos.update_task(task, %{status: new_status, position: position})
+    tasks = Todos.list_tasks()
+    {:noreply, assign(socket, tasks: tasks)}
+  end
+
+  @impl true
+  def handle_event("show-haiku-list", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:live_action, :list)
+     |> assign(:page_title, "All Haikus")}
+  end
+
+  @impl true
+  def handle_event("close-list", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:live_action, :index)
+     |> assign(:page_title, "TodoHaiku")}
+  end
+
+  @impl true
+  def handle_event("edit-haiku", %{"id" => id}, socket) do
+    task = Todos.get_task!(id)
+
+    # Validate the existing haiku content for editing
+    {is_valid, syllable_counts} = case task.content do
+      nil -> {false, [0, 0, 0]}
+      "" -> {false, [0, 0, 0]}
+      content ->
+        case HaikuValidator.validate_haiku(content) do
+          {valid, counts, _feedback} when is_boolean(valid) and is_list(counts) ->
+            {valid, ensure_three_counts(counts)}
+          _ -> {false, [0, 0, 0]}
+        end
+    end
+
+    {:noreply,
+     socket
+     |> assign(:task, task)
+     |> assign(:live_action, :edit)
+     |> assign(:debug_info, %{
+       last_validation: DateTime.utc_now(),
+       validation_count: 0,
+       is_valid: is_valid,
+       syllable_counts: syllable_counts
+     })
+     |> assign(:page_title, "Edit Haiku")}
+  end
+
+  @impl true
+  def handle_event("new-haiku", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:task, nil)
+     |> assign(:live_action, :index)
+     |> assign(:page_title, "TodoHaiku")}
+  end
+
+  # Helper function to ensure syllable_counts is always a 3-element array
+  defp ensure_three_counts(counts) when is_list(counts) do
+    case length(counts) do
+      0 -> [0, 0, 0]
+      1 -> counts ++ [0, 0]
+      2 -> counts ++ [0]
+      3 -> counts
+      _ -> Enum.take(counts, 3)
+    end
+  end
+
+  defp ensure_three_counts(_), do: [0, 0, 0]
+
+  defp detect_over_limit(previous_counts, current_counts) do
+    # Haiku syllable limits per line: [5, 7, 5]
+    limits = [5, 7, 5]
+
+    # Check if any line went from at-or-under limit to over limit
+    Enum.with_index(previous_counts)
+    |> Enum.find_value(fn {prev_count, index} ->
+      current_count = Enum.at(current_counts, index)
+      limit = Enum.at(limits, index)
+
+      if prev_count <= limit && current_count > limit do
+        index # Return the line index that went over limit
+      else
+        nil
+      end
+    end)
   end
 end

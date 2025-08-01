@@ -205,7 +205,8 @@ defmodule TodoHaiku.OrtexSyllableCounter do
       if Enum.empty?(words) do
         {:ok, 0}
       else
-        total_syllables = Enum.reduce(words, 0, fn {word, is_complete}, acc ->
+        # Debug: log each word and its syllable count
+        {total_syllables, word_counts} = Enum.reduce(words, {0, []}, fn {word, is_complete}, {acc, counts} ->
           syllables = if is_complete do
             # Complete word: Use dictionary first, ML fallback
             predict_complete_word(word, state)
@@ -213,8 +214,15 @@ defmodule TodoHaiku.OrtexSyllableCounter do
             # Partial word: Use fast ML inference
             predict_partial_word(word, state)
           end
-          acc + syllables
+
+          # Log each word's syllable count
+          IO.puts("Word: '#{word}' (#{if is_complete, do: "complete", else: "partial"}) -> #{syllables} syllables")
+
+          {acc + syllables, counts ++ [{word, syllables}]}
         end)
+
+        # Log the total and breakdown
+        IO.puts("Total syllables: #{total_syllables}, breakdown: #{inspect(word_counts)}")
 
         {:ok, total_syllables}
       end

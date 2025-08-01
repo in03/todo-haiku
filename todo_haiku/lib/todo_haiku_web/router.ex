@@ -36,6 +36,7 @@ defmodule TodoHaikuWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live "/tasks", TodoLive.Index, :index
+    live "/tasks/list", TodoLive.Index, :list
     live "/tasks/new", TodoLive.Index, :new
     live "/tasks/:id/edit", TodoLive.Index, :edit
   end

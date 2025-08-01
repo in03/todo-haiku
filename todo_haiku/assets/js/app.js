@@ -22,350 +22,407 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 
-// Load Sortable.js and Alpine.js from CDN
-// No need for import statements as we're loading them as scripts
+// Alpine.js for PETAL stack client-side reactivity
+import Alpine from 'alpinejs'
 
-// Define hooks for LiveView 
-const Hooks = {}
+// Register Alpine components
+Alpine.data('haikuEnforcement', () => ({
+  syllableCounts: [0, 0, 0],
+  expectedSyllables: [5, 7, 5],
+  isShaking: false,
+  lastContent: '',
+  isProcessingOverLimit: false,
 
-// Define a hook for the Kanban board using Sortable.js
-Hooks.KanbanBoard = {
-  mounted() {
-    const board = this.el;
+  init() {
+    let inputTimer;
+
+    this.handleKeydown = this.handleKeydown.bind(this);
+
+    // Listen for Phoenix events
+    window.addEventListener('phx:syllable-update', (e) => {
+      if (e.detail && e.detail.syllable_counts) {
+        this.updateSyllableCounts(e.detail.syllable_counts);
+      }
+    });
+  },
+
+  updateSyllableCounts(counts) {
+    console.log('Updating syllable counts:', counts);
+    if (Array.isArray(counts)) {
+      this.syllableCounts = counts.length === 3 ? counts : [0, 0, 0];
+    } else if (typeof counts === 'string') {
+      // Handle comma-separated string from template
+      const parsed = counts.split(',').map(n => parseInt(n) || 0);
+      this.syllableCounts = parsed.length === 3 ? parsed : [0, 0, 0];
+    }
+  },
+
+  handleOverLimit() {
+    if (this.isProcessingOverLimit) return;
     
-    // Check if Sortable is available
-    if (typeof Sortable === 'undefined') {
-      console.error('Sortable.js is not loaded. Please add the script to your HTML.');
-      return;
+    this.isProcessingOverLimit = true;
+    console.log('Processing over-limit: sending backspace');
+    
+    const textarea = document.getElementById('zen-content-textarea');
+    if (textarea) {
+      // Send a backspace to remove the last character
+      const currentPos = textarea.selectionStart;
+      if (currentPos > 0) {
+        const beforeCursor = textarea.value.substring(0, currentPos - 1);
+        const afterCursor = textarea.value.substring(currentPos);
+        textarea.value = beforeCursor + afterCursor;
+        textarea.setSelectionRange(currentPos - 1, currentPos - 1);
+        
+        // Trigger input event to notify LiveView
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      
+      // Shake the window
+      this.shakeWindow();
     }
     
-    // Initialize Sortable for each column in the board
-    const columns = board.querySelectorAll(".kanban-column-content");
+    // Reset processing flag after a short delay
+    setTimeout(() => {
+      this.isProcessingOverLimit = false;
+    }, 100);
+  },
+
+  handleKeydown(event) {
+    const textarea = event.target;
+    const content = textarea.value;
+    const cursorPos = textarea.selectionStart;
     
-    columns.forEach(column => {
-      new Sortable(column, {
-        group: 'tasks',
-        animation: 150,
-        ghostClass: 'task-ghost',
-        chosenClass: 'task-chosen',
-        dragClass: 'task-drag',
-        handle: '.task-card', // Use task card as handle
-        draggable: '.task-card', // Only allow task cards to be dragged
-        filter: '.column-guide, .text-center', // Don't allow column guides to be dragged
-        forceFallback: true, // Force fallback for better animation
-        fallbackClass: 'sortable-fallback',
-        scroll: true, // Enable scrolling in columns
-        scrollSensitivity: 80,
-        scrollSpeed: 20,
+    console.log('Keydown:', event.key, 'Syllable counts:', this.syllableCounts);
+
+    // Allow special keys
+    const allowedKeys = [
+      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+      'Home', 'End', 'PageUp', 'PageDown',
+      'Backspace', 'Delete', 'Tab', 'Escape'
+    ];
+
+    if (allowedKeys.includes(event.key)) {
+      console.log('Allowed navigation key:', event.key);
+      return;
+    }
+
+    // Allow Ctrl/Cmd combinations
+    if (event.ctrlKey || event.metaKey) {
+      console.log('Allowed shortcut:', event.key);
+      return;
+    }
+
+    // Get current line info
+    const currentLineIndex = this.getCurrentLineIndex(content, cursorPos);
+    console.log('Current line index:', currentLineIndex);
+    
+    // Only enforce on first 3 lines
+    if (currentLineIndex >= 3) {
+      console.log('Beyond line 3, no enforcement');
+      return;
+    }
+
+    const expectedSyllables = this.expectedSyllables[currentLineIndex];
+    const currentSyllables = this.syllableCounts[currentLineIndex] || 0;
+    
+    console.log(`Line ${currentLineIndex}: ${currentSyllables}/${expectedSyllables} syllables`);
+
+    // Check if we're at a word boundary (space or newline before cursor)
+    const isAtWordBoundary = cursorPos === 0 || 
+                            content[cursorPos - 1] === ' ' || 
+                            content[cursorPos - 1] === '\n';
+
+    // Handle SPACE and ENTER at syllable limits
+    if ((event.key === ' ' || event.key === 'Enter') && currentSyllables === expectedSyllables && !isAtWordBoundary) {
+      console.log('Space/Enter at syllable limit - auto line break');
+      event.preventDefault();
+      
+      if (currentLineIndex < 2) {
+        // Insert newline and move to next line
+        const beforeCursor = content.substring(0, cursorPos);
+        const afterCursor = content.substring(cursorPos);
+        const newContent = beforeCursor + '\n' + afterCursor;
         
-        // When drag starts
-        onStart: (evt) => {
-          document.body.classList.add('dragging-active');
-          // Make all guides visible during dragging
-          document.querySelectorAll('.column-guide').forEach(guide => {
-            guide.style.opacity = '0.5';
-            guide.style.height = '8px';
-            guide.style.margin = '8px 0';
-          });
-          
-          // Highlight destination columns
-          document.querySelectorAll('.kanban-column').forEach(col => {
-            if (col !== evt.from.closest('.kanban-column')) {
-              col.classList.add('highlight-column');
-            }
-          });
-        },
+        textarea.value = newContent;
+        textarea.setSelectionRange(cursorPos + 1, cursorPos + 1);
         
-        // When drag ends
-        onEnd: (evt) => {
-          document.body.classList.remove('dragging-active');
-          // Get the task id and new status
-          const taskId = evt.item.getAttribute('data-task-id');
-          const newStatus = evt.to.getAttribute('data-column');
-          
-          // Calculate the new position in the column
-          const newIndex = evt.newIndex;
-          
-          // Hide guides when dragging is done
-          document.querySelectorAll('.column-guide').forEach(guide => {
-            guide.style.opacity = '0';
-            guide.style.height = '2px';
-            guide.style.margin = '5px 0';
-          });
-          
-          // Remove highlight from destination columns
-          document.querySelectorAll('.kanban-column').forEach(col => {
-            col.classList.remove('highlight-column');
-          });
-          
-          // Send the update to the server
-          this.pushEvent("task-moved", {
-            id: taskId,
-            status: newStatus,
-            position: newIndex
-          });
-          
-          // Update the task card color to match the new column
-          setTimeout(() => {
-            this.updateTaskCardColors();
-            this.updateColumnGlowIntensity();
-            this.addFloatingEffect(); // Refresh floating effects
-          }, 300); // Short delay to allow DOM updates
+        // Trigger input event to notify LiveView
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      } else {
+        // At line 3 limit - shake to indicate no more lines
+        this.shakeWindow();
+      }
+      return;
+    }
+
+    // Block input if we're already at the syllable limit for this line
+    if (currentSyllables >= expectedSyllables && !isAtWordBoundary) {
+      console.log('At or over syllable limit, blocking input');
+      event.preventDefault();
+      this.shakeWindow();
+      return;
+    }
+
+    // Allow input if under the limit
+    console.log('Under syllable limit, allowing input');
+  },
+
+  getCurrentLineIndex(content, cursorPos) {
+    const beforeCursor = content.substring(0, cursorPos);
+    const lineBreaks = (beforeCursor.match(/\n/g) || []).length;
+    return Math.min(lineBreaks, 2); // Cap at 2 (third line)
+  },
+
+  shakeWindow() {
+    console.log('Shaking window');
+    this.isShaking = true;
+    
+    setTimeout(() => {
+      this.isShaking = false;
+    }, 500);
+  }
+}))
+
+// Start Alpine
+Alpine.start()
+
+// Zen Interface Hooks (simplified)
+let ZenHooks = {
+  ZenFocus: {
+  mounted() {
+      this.el.addEventListener('focus', (e) => {
+        e.target.classList.add('zen-focus');
+        // Add gentle animation on focus
+        e.target.style.transform = 'scale(1.02)';
+        e.target.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      });
+      
+      this.el.addEventListener('blur', (e) => {
+        e.target.classList.remove('zen-focus');
+        e.target.style.transform = 'scale(1)';
+      });
+    }
+  },
+
+  ZenForm: {
+    mounted() {
+      // Add zen animations to form elements
+      const inputs = this.el.querySelectorAll('input, textarea');
+      inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+          input.style.animation = 'zen-expand 0.4s ease-out';
+        });
+        
+        input.addEventListener('blur', () => {
+          input.style.animation = '';
+        });
+      });
+    }
+  },
+
+  ZenTransition: {
+    mounted() {
+      // Add entrance animation
+      this.el.style.animation = 'zen-fade-in 0.6s ease-out';
+      
+      // Add leaf drift animation to leaf icons
+      const leafIcons = this.el.querySelectorAll('.zen-leaf-icon');
+      leafIcons.forEach(leaf => {
+        leaf.style.animation = 'leaf-drift 6s ease-in-out infinite';
+      });
+    }
+  },
+
+  ZenParticles: {
+    mounted() {
+      // Create subtle particle background effect
+      const particles = document.createElement('div');
+      particles.className = 'zen-particles';
+      document.body.appendChild(particles);
+    },
+    
+    destroyed() {
+      const particles = document.querySelector('.zen-particles');
+      if (particles) {
+        particles.remove();
+      }
+    }
+  },
+
+  ZenFlash: {
+    mounted() {
+      // Style flash messages for zen interface
+      this.el.classList.add('zen-flash');
+      
+      // Auto-hide after 4 seconds with fade out
+      setTimeout(() => {
+        this.el.style.animation = 'zen-fade-out 0.5s ease-out forwards';
+        setTimeout(() => {
+          this.el.remove();
+        }, 500);
+      }, 4000);
+    }
+  },
+
+  // Zen Title Input Hook - handles the initial title input and card expansion
+  ZenTitleInput: {
+    mounted() {
+      console.log('ZenTitleInput hook mounted');
+      this.el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const title = this.el.value.trim();
+          console.log('Enter pressed, title:', title);
+          if (title) {
+            // Trigger the start-haiku event with the title
+            this.pushEvent('start-haiku', { title: title });
+            console.log('Sent start-haiku event');
+          }
         }
       });
-    });
-    
-    // Initialize column effects
-    this.setupHoverEffects();
-    this.updateTaskCardColors();
-    this.updateColumnGlowIntensity();
-    this.setupTaskCardTilt();
-    // this.setupTaskDotRipple(); // Call removed
-    this.setupHeaderGlow();
-    
-    // Add pulse animation to task counters
-    const taskCounters = board.querySelectorAll('.task-counter');
-    taskCounters.forEach(counter => {
-      // counter.style.transition = 'all 0.3s ease'; // CSS now handles specific transitions
-      counter.addEventListener('mouseenter', () => {
-        counter.style.transform = 'translateY(-50%) scale(1.2)'; // Combine transforms
-        counter.style.boxShadow = `0 0 12px var(--glow-color)`;
-        counter.style.textShadow = `0 0 10px var(--glow-color)`;
-      });
-      counter.addEventListener('mouseleave', () => {
-        counter.style.transform = 'translateY(-50%) scale(1)'; // Combine transforms and reset scale
-        counter.style.boxShadow = `0 0 8px var(--glow-color)`;
-        counter.style.textShadow = `0 0 8px var(--glow-color)`;
-      });
-    });
+
+      // Auto-focus on mount
+      setTimeout(() => {
+        this.el.focus();
+      }, 100);
+    }
   },
-  
-  setupHoverEffects() {
-    // Add hover effects to columns
-    const columns = this.el.querySelectorAll('.kanban-column');
-    columns.forEach(column => {
-      const header = column.querySelector('.kanban-column-header');
+
+  // Simplified content input hook - Alpine.js handles enforcement
+  ZenContentInput: {
+    mounted() {
+      console.log('ZenContentInput hook mounted (simplified for Alpine)');
       
-      // header.addEventListener('mouseenter', () => { // Keep for glow, remove transform
-        // header.style.transform = 'translateY(-3px)';
-        // header.style.boxShadow = `0 8px 24px rgba(0, 0, 0, 0.3), 0 0 calc(var(--glow-intensity, 5px) * 1.5) var(--glow-color)`;
-      // });
-      
-      // header.addEventListener('mouseleave', () => { // Keep for glow, remove transform
-        // header.style.transform = 'translateY(0)';
-        // header.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.2), 0 0 var(--glow-intensity, 5px) var(--glow-color)`;
-      // });
-    });
-    
-    // Add hover effects to task cards for extra glow
-    const cards = this.el.querySelectorAll('.task-card');
-    cards.forEach(card => {
-      card.style.animation = 'none';
-      card.addEventListener('mouseenter', () => {
-        // 3D tilt and glow
-        card.classList.add('task-card-tilt');
-        card.style.transition = 'box-shadow 0.18s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1)';
-        card.style.boxShadow = `0 8px 32px 0 rgba(0,0,0,0.28), 0 0 24px 4px var(--glow-color, #9d8cff)`;
+      // Auto-focus when the content area appears
+      setTimeout(() => {
+        this.el.focus();
+        this.el.setSelectionRange(this.el.value.length, this.el.value.length);
+      }, 700);
+
+      this.el.addEventListener('input', (e) => {
+        const content = this.el.value;
+        console.log('Input event, content:', content);
+        // Trigger validation event for LiveView
+        this.pushEvent('validate-content', { content: content });
       });
-      card.addEventListener('mousemove', (e) => {
-        // Subtle 3D tilt
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const rotateX = ((y - centerY) / centerY) * 6;
-        const rotateY = ((x - centerX) / centerX) * -6;
-        card.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.025)`;
+
+      // Handle special shortcuts
+      this.el.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          this.pushEvent('cancel-haiku');
+        }
+        
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          this.pushEvent('save-haiku');
+        }
       });
-      card.addEventListener('mouseleave', () => {
-        card.classList.remove('task-card-tilt');
-        card.style.transform = 'none';
-        card.style.boxShadow = 'none';
-        card.style.zIndex = '1';
-      });
-    });
-  },
-  
-  updateTaskCardColors() {
-    // Update task cards to inherit column color variables
-    const columns = this.el.querySelectorAll('.kanban-column');
-    columns.forEach(column => {
-      const glowColor = getComputedStyle(column).getPropertyValue('--glow-color');
-      const taskCards = column.querySelectorAll('.task-card');
-      const guides = column.querySelectorAll('.column-guide');
-      
-      taskCards.forEach(card => {
-        // Ensure task cards show correct color styling from their column
-        card.style.setProperty('--glow-color', glowColor);
-      });
-      
-      // Also set the guide colors
-      guides.forEach(guide => {
-        guide.style.background = `linear-gradient(90deg, transparent, ${glowColor}, transparent)`;
-      });
-    });
-  },
-  
-  updateColumnGlowIntensity() {
-    // Update column glow intensity based on task count
-    const columns = this.el.querySelectorAll('.kanban-column');
-    columns.forEach(column => {
-      const taskCount = column.querySelectorAll('.task-card').length;
-      const counter = column.querySelector('.task-counter');
-      const header = column.querySelector('.kanban-column-header');
-      
-      // Apply appropriate glow class based on task count
-      column.classList.remove('task-count-low', 'task-count-medium', 'task-count-high');
-      
-      if (taskCount >= 5) {
-        column.classList.add('task-count-high');
-      } else if (taskCount >= 3) {
-        column.classList.add('task-count-medium');
-      } else if (taskCount > 0) {
-        column.classList.add('task-count-low');
+    },
+
+    updated() {
+      // Ensure focus stays on content when re-rendered
+      if (document.activeElement !== this.el) {
+        this.el.focus();
       }
+    }
+  },
+
+  // Enhanced Zen Form Hook for overall card management
+  ZenCardManager: {
+    mounted() {
+      console.log('ZenCardManager hook mounted');
+      this.cardElement = this.el;
       
-      // Apply dimming for empty columns
-      if (taskCount === 0) {
-        column.classList.add('kanban-column-empty');
-      } else {
-        column.classList.remove('kanban-column-empty');
+      // Add entrance animation
+      this.cardElement.style.opacity = '0';
+      this.cardElement.style.transform = 'translateY(20px) scale(0.95)';
+      
+      setTimeout(() => {
+        this.cardElement.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
+        this.cardElement.style.opacity = '1';
+        this.cardElement.style.transform = 'translateY(0) scale(1)';
+      }, 50);
+    },
+
+    updated() {
+      console.log('ZenCardManager updated, checking for expanded state');
+      // Handle state transitions
+      if (this.cardElement.classList.contains('expanded')) {
+        console.log('Card is expanded, setting up content focus');
+        // Card expanded - trigger content focus after animation
+        setTimeout(() => {
+          const contentTextarea = this.cardElement.querySelector('#zen-content-textarea');
+          if (contentTextarea) {
+            contentTextarea.focus();
+            contentTextarea.setSelectionRange(contentTextarea.value.length, contentTextarea.value.length);
+          }
+        }, 600);
       }
-      
-      // Update counter if it exists
-      if (counter) {
-        counter.textContent = taskCount;
-      }
-    });
-  },
-  
-  addFloatingEffect() {
-    // Add subtle floating animation to cards for more life
-    const cards = this.el.querySelectorAll('.task-card');
-    cards.forEach((card, index) => {
-      // Create different timings for each card
-      const animationDuration = 3 + (index % 3); // 3-5 seconds
-      const animationDelay = index * 0.2; // Stagger the animations
-      
-      card.style.animation = `float ${animationDuration}s ease-in-out ${animationDelay}s infinite alternate`;
-    });
-  },
-  
-  setupTaskCardTilt() {
-    // Already handled in setupHoverEffects
-  },
-  
-  setupTaskDotRipple() {
-    // const dots = this.el.querySelectorAll('.task-dot');
-    // dots.forEach(dot => {
-    //   dot.addEventListener('click', (e) => {
-    //     const card = dot.closest('.task-card');
-    //     if (!card) return;
-    //     const existingOverlay = card.querySelector('.dot-expand-overlay');
-    //     if (existingOverlay) existingOverlay.remove();
-    //     const overlay = document.createElement('span');
-    //     overlay.className = 'dot-expand-overlay';
-    //     const cardRect = card.getBoundingClientRect();
-    //     const dotRect = dot.getBoundingClientRect();
-    //     const initialX = dotRect.left - cardRect.left + dotRect.width / 2;
-    //     const initialY = dotRect.top - cardRect.top + dotRect.height / 2;
-    //     overlay.style.left = `${initialX}px`;
-    //     overlay.style.top = `${initialY}px`;
-    //     overlay.style.width = '0';
-    //     overlay.style.height = '0';
-    //     overlay.style.borderRadius = '50%';
-    //     overlay.style.position = 'absolute';
-    //     overlay.style.zIndex = '0';
-    //     overlay.style.backgroundColor = getComputedStyle(dot).getPropertyValue('background-color');
-    //     overlay.style.pointerEvents = 'none';
-    //     overlay.style.transform = 'translate(-50%, -50%) scale(0)';
-    //     overlay.style.opacity = '0'; 
-    //     const originalOverflow = card.style.overflow;
-    //     card.style.overflow = 'hidden';
-    //     card.appendChild(overlay);
-    //     const dx = Math.max(initialX, cardRect.width - initialX);
-    //     const dy = Math.max(initialY, cardRect.height - initialY);
-    //     const rippleRadius = Math.sqrt(dx * dx + dy * dy);
-    //     const initialSize = Math.max(dotRect.width, dotRect.height, 1);
-    //     const scaleFactor = (rippleRadius * 2) / initialSize; 
-    //     requestAnimationFrame(() => {
-    //       overlay.style.transition = `transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1)`;
-    //       overlay.style.transform = `translate(-50%, -50%) scale(${scaleFactor * 1.1})`;
-    //       overlay.style.opacity = '0.3';
-    //     });
-    //     setTimeout(() => {
-    //       overlay.style.transition = `opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)`;
-    //       overlay.style.opacity = '0';
-    //     }, 250); 
-    //     setTimeout(() => {
-    //       overlay.remove();
-    //       card.style.overflow = originalOverflow;
-    //     }, 450); 
-    //   });
-    // });
-    // Functionality removed for now.
-  },
-  
-  setupHeaderGlow() {
-    // Mouse-following glow for column headers
-    const headers = this.el.querySelectorAll('.kanban-column-header');
-    headers.forEach(header => {
-      const glow = header.querySelector('.header-glow');
-      header.addEventListener('mousemove', (e) => {
-        const rect = header.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        glow.style.display = 'block';
-        header.classList.add('glow-active');
-        glow.style.background = `radial-gradient(circle at ${x}% ${y}%, var(--glow-color, #9d8cff) 0%, transparent 70%)`;
-      });
-      header.addEventListener('mouseleave', () => {
-        header.classList.remove('glow-active');
-        glow.style.display = 'none';
-      });
-    });
+    }
   }
 };
 
-// Alpine.js initialization handling
-document.addEventListener('DOMContentLoaded', () => {
-  // Only initialize if manual initialization is enabled and Alpine isn't already initialized
-  if (window._x_alpineInitManual && typeof Alpine !== 'undefined' && !window.Alpine?.initialized) {
-    // Check if Alpine is already initialized (Alpine internally sets this up)
-    if (!document.querySelector('[x-data]')?.hasAttribute('data-alpine-initialized')) {
-      // Set a flag to prevent double initialization
-      window.Alpine.initialized = true;
-      console.log('Initializing Alpine.js from app.js');
-      // Start Alpine
-      Alpine.start();
-    } else {
-      console.log('Alpine.js already initialized, skipping manual initialization');
+// Zen keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  // ESC to cancel/return to zen state
+  if (e.key === 'Escape') {
+    const cancelBtn = document.querySelector('.zen-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.click();
+    }
+  }
+  
+  // Ctrl/Cmd + N for new haiku
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    const newBtn = document.querySelector('[phx-click="new-haiku"]');
+    if (newBtn) {
+      newBtn.click();
+    }
+  }
+  
+  // Ctrl/Cmd + L for haiku list
+  if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+    e.preventDefault();
+    const listBtn = document.querySelector('[phx-click="show-haiku-list"]');
+    if (listBtn) {
+      listBtn.click();
     }
   }
 });
 
-// Configure LiveSocket with hooks and params
+// Zen scroll behavior
+let zenScrollTimeout;
+window.addEventListener('scroll', () => {
+  document.body.classList.add('scrolling');
+  clearTimeout(zenScrollTimeout);
+  zenScrollTimeout = setTimeout(() => {
+    document.body.classList.remove('scrolling');
+  }, 150);
+});
+
+// Zen mouse movement - subtle UI responses
+let zenMouseTimeout;
+document.addEventListener('mousemove', () => {
+  const controls = document.getElementById('zen-controls');
+  if (controls) {
+    controls.style.opacity = '1';
+    clearTimeout(zenMouseTimeout);
+    zenMouseTimeout = setTimeout(() => {
+      controls.style.opacity = '0';
+    }, 2000);
+  }
+});
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: Hooks,
-  dom: {
-    onBeforeElUpdated(from, to) {
-      // Check if Alpine is available and properly initialized
-      if (typeof Alpine !== 'undefined' && window.Alpine?.initialized) {
-        if (from._x_dataStack) {
-          Alpine.clone(from, to);
-        }
-      }
-    }
-  }
+  hooks: ZenHooks
 })
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
-window.addEventListener("phx:page-loading-start", _info => topbar.show())
+window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // Handle delete links with CSRF tokens
@@ -409,7 +466,7 @@ liveSocket.connect()
 
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
-// >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
+// << liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
@@ -423,4 +480,25 @@ window.addEventListener('keydown', (event) => {
     searchInput.focus();
   }
 });
+
+// Zen fade-out animation for flash messages
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes zen-fade-out {
+    0% {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+  }
+  
+  body.scrolling .zen-controls {
+    opacity: 0.3 !important;
+    transition: opacity 0.2s ease !important;
+  }
+`;
+document.head.appendChild(style);
 

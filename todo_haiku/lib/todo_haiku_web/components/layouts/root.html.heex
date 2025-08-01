@@ -9,23 +9,11 @@
     </.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
 
-    <!-- Prevent Alpine.js auto initialization -->
-    <script>
-      window._x_alpineInitManual = true;
-      // Additional check to ensure Alpine doesn't initialize twice
-      window.Alpine = window.Alpine || {};
-      window.Alpine.initialized = false;
-    </script>
-    
     <!-- Add Sortable.js from CDN -->
     <script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     
-    <!-- Add Alpine.js from CDN with manual initialization -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.7/dist/cdn.min.js"></script>
-    
-    <!-- Load our app.js last -->
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-    </script>
+    <!-- Load our app.js which includes Alpine.js -->
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}></script>
     <style>
       /* Force no scrollbars on the login page */
       body:not(:has(header)) {
@@ -34,7 +22,7 @@
     </style>
   </head>
   <body style="height: 100%; margin: 0; padding: 0; box-sizing: border-box;" class="bg-gray-900 text-gray-200">
-    <%= if @current_user do %>
+    <%= if @current_user && !Map.get(assigns, :zen_mode, false) do %>
       <header class="bg-gray-800 shadow-md">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="flex h-16 items-center justify-between">
