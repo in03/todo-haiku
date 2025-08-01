@@ -41,7 +41,19 @@ Alpine.data('haikuEnforcement', () => ({
     // Listen for Phoenix events
     window.addEventListener('phx:syllable-update', (e) => {
       if (e.detail && e.detail.syllable_counts) {
+        const oldCounts = [...this.syllableCounts];
         this.updateSyllableCounts(e.detail.syllable_counts);
+        
+        // Check if any line went over its limit
+        const currentLineIndex = this.getCurrentLineIndex(document.getElementById('zen-content-textarea').value, 
+                                                        document.getElementById('zen-content-textarea').selectionStart);
+        
+        this.syllableCounts.forEach((count, index) => {
+          if (count > this.expectedSyllables[index] && oldCounts[index] <= this.expectedSyllables[index]) {
+            console.log(`Line ${index} went over limit: ${count}/${this.expectedSyllables[index]}`);
+            this.handleOverLimit();
+          }
+        });
       }
     });
   },
@@ -61,23 +73,69 @@ Alpine.data('haikuEnforcement', () => ({
     if (this.isProcessingOverLimit) return;
     
     this.isProcessingOverLimit = true;
-    console.log('Processing over-limit: sending backspace');
+    console.log('Processing over-limit: analyzing line content');
     
     const textarea = document.getElementById('zen-content-textarea');
     if (textarea) {
-      // Send a backspace to remove the last character
+      const content = textarea.value;
       const currentPos = textarea.selectionStart;
-      if (currentPos > 0) {
-        const beforeCursor = textarea.value.substring(0, currentPos - 1);
-        const afterCursor = textarea.value.substring(currentPos);
-        textarea.value = beforeCursor + afterCursor;
-        textarea.setSelectionRange(currentPos - 1, currentPos - 1);
+      const currentLineIndex = this.getCurrentLineIndex(content, currentPos);
+      
+      if (currentPos > 0 && currentLineIndex >= 0) {
+        // Find the start of the current line
+        let lineStart = content.lastIndexOf('\n', currentPos - 1) + 1;
+        if (lineStart === 0) lineStart = 0;
+        
+        // Get the current line's content
+        const currentLine = content.substring(lineStart, currentPos);
+        const words = currentLine.split(' ');
+        const lastWord = words[words.length - 1] || '';
+        const isPartialWord = !currentLine.endsWith(' ');
+        
+        // If we're at exactly 5 syllables and it's a complete word
+        if (this.syllableCounts[currentLineIndex] === 5 && !isPartialWord) {
+          console.log('Exactly 5 syllables on complete word - moving to next line');
+          // Move to next line if not the last line
+          if (currentLineIndex < 2) {
+            const beforeCursor = content.substring(0, currentPos);
+            const afterCursor = content.substring(currentPos);
+            textarea.value = beforeCursor + '\n' + afterCursor;
+            textarea.setSelectionRange(currentPos + 1, currentPos + 1);
+          }
+        } else {
+          console.log('Over syllable limit - backspacing to last valid word');
+          // Find the last word boundary before the current position
+          let lastWordBoundary = currentPos;
+          while (lastWordBoundary > lineStart && 
+                 content[lastWordBoundary - 1] !== ' ' && 
+                 content[lastWordBoundary - 1] !== '\n') {
+            lastWordBoundary--;
+          }
+          
+          // Get content up to the last word boundary
+          const lineContent = content.substring(lineStart, lastWordBoundary);
+          const validWords = lineContent.split(' ').filter(w => w.length > 0);
+          
+          // Join words and ensure proper spacing
+          const validLine = validWords.join(' ');
+          const cursorLine = validLine.trimEnd();
+          const newContent = validLine + (validLine.length > 0 ? ' ' : '');
+          
+          // Construct the new content
+          const beforeLine = content.substring(0, lineStart);
+          const afterCursor = content.substring(currentPos);
+          textarea.value = beforeLine + newContent + afterCursor;
+          
+          // Set cursor position at the end of the last valid word
+          const newPos = lineStart + cursorLine.length;
+          textarea.setSelectionRange(newPos, newPos);
+        }
         
         // Trigger input event to notify LiveView
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
       }
       
-      // Shake the window
+      // Shake the window to indicate the limit was reached
       this.shakeWindow();
     }
     
@@ -155,10 +213,10 @@ Alpine.data('haikuEnforcement', () => ({
       return;
     }
 
-    // Block input if we're already at the syllable limit for this line
-    if (currentSyllables >= expectedSyllables && !isAtWordBoundary) {
-      console.log('At or over syllable limit, blocking input');
-      event.preventDefault();
+    // Allow typing to continue - validation will catch up and handle over-limit
+    if (currentSyllables > expectedSyllables && !isAtWordBoundary) {
+      console.log('Over syllable limit, but allowing input - validation will catch up');
+      // Don't prevent default - let the user keep typing
       this.shakeWindow();
       return;
     }
@@ -174,6 +232,11 @@ Alpine.data('haikuEnforcement', () => ({
   },
 
   shakeWindow() {
+    if (this.isShaking) {
+      console.log('Shake already in progress, skipping');
+      return;
+    }
+    
     console.log('Shaking window');
     this.isShaking = true;
     
